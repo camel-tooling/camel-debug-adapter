@@ -16,8 +16,24 @@
  */
 package com.github.cameltooling.dap.internal;
 
+import java.util.concurrent.CompletableFuture;
+
+import org.eclipse.lsp4j.debug.Capabilities;
+import org.eclipse.lsp4j.debug.InitializeRequestArguments;
+import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 
+	private IDebugProtocolClient client;
+
+	public void connect(IDebugProtocolClient clientProxy) {
+		this.client = clientProxy;
+	}
+	
+	@Override
+	public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
+		client.initialized();
+		return CompletableFuture.completedFuture(new Capabilities());
+	}
 }

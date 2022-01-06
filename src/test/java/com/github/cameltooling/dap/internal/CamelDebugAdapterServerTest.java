@@ -16,18 +16,26 @@
  */
 package com.github.cameltooling.dap.internal;
 
-import org.eclipse.lsp4j.debug.launch.DSPLauncher;
-import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
-import org.eclipse.lsp4j.jsonrpc.Launcher;
+import static org.assertj.core.api.Assertions.assertThat;
 
-public class CamelDebugAdapterLauncher {
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
-	public static void main(String[] args) {
-		CamelDebugAdapterServer debugServer = new CamelDebugAdapterServer();
-		Launcher<IDebugProtocolClient> serverLauncher = DSPLauncher.createServerLauncher(debugServer, System.in, System.out);
-		IDebugProtocolClient clientProxy = serverLauncher.getRemoteProxy();
-		debugServer.connect(clientProxy);
-		serverLauncher.startListening();
+import org.eclipse.lsp4j.debug.Capabilities;
+import org.eclipse.lsp4j.debug.InitializeRequestArguments;
+import org.junit.jupiter.api.Test;
+
+class CamelDebugAdapterServerTest {
+
+	@Test
+	void testInitialize() throws InterruptedException, ExecutionException {
+		CamelDebugAdapterServer server = new CamelDebugAdapterServer();
+		DummyCamelDebugClient clientProxy = new DummyCamelDebugClient();
+		server.connect(clientProxy);
+		CompletableFuture<Capabilities> initialization = server.initialize(new InitializeRequestArguments());
+		assertThat(initialization.get()).isNotNull();
+		assertThat(clientProxy.hasReceivedInitializedEvent()).isTrue();
+		
 	}
 
 }
