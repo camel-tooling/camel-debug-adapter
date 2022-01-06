@@ -16,16 +16,19 @@
  */
 package com.github.cameltooling.dap.internal;
 
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.debug.Capabilities;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
+import org.eclipse.lsp4j.debug.TerminateArguments;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 
 	private IDebugProtocolClient client;
+	private BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -36,4 +39,22 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		client.initialized();
 		return CompletableFuture.completedFuture(new Capabilities());
 	}
+	
+	@Override
+	public CompletableFuture<Void> attach(Map<String, Object> args) {
+		connectionManager.attach(args);
+		return CompletableFuture.completedFuture(null);
+	}
+
+	
+	@Override
+	public CompletableFuture<Void> terminate(TerminateArguments args) {
+		getConnectionManager().terminate();
+		return CompletableFuture.completedFuture(null);
+	}
+
+	public BacklogDebuggerConnectionManager getConnectionManager() {
+		return connectionManager;
+	}
+
 }
