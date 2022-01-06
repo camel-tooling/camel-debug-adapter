@@ -60,4 +60,12 @@
 			</plugins>
 		</pluginManagement>
 	</build>
+	
+	<dependencies>
+		<dependency>
+			<groupId>org.eclipse.lsp4j</groupId>
+			<artifactId>org.eclipse.lsp4j.debug</artifactId>
+			<version>0.12.0</version>
+		</dependency>
+	</dependencies>
 </project>
