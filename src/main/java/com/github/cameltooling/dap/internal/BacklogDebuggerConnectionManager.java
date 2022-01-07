@@ -29,12 +29,15 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.sun.tools.attach.VirtualMachine;
 
 public class BacklogDebuggerConnectionManager {
 
 	private static final String DEFAULT_JMX_URI = "service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi";
+	private static final Logger LOGGER = LoggerFactory.getLogger(BacklogDebuggerConnectionManager.class);
 
 	public static final String ATTACH_PARAM_PID = "attach_pid";
 
@@ -51,7 +54,7 @@ public class BacklogDebuggerConnectionManager {
 			vm.detach();
 			return localJmxUrl;
 		} catch (Exception e) {
-			e.printStackTrace();
+			LOGGER.error("Error when trying to get local JMX Url from provided PID", e);
 			return null;
 		}
 	}
@@ -75,10 +78,10 @@ public class BacklogDebuggerConnectionManager {
 						debuggerMBeanObjectName,
 						ManagedBacklogDebuggerMBean.class);
 			} else {
-				// TODO: log something or send a message to client
+				LOGGER.warn("No BacklogDebugger found on connection with {}", jmxAddress);
 			}
 		} catch (IOException | MalformedObjectNameException e) {
-			e.printStackTrace();
+			LOGGER.error("Error trying to attach", e);
 		}
 	}
 
@@ -87,8 +90,7 @@ public class BacklogDebuggerConnectionManager {
 			try {
 				jmxConnector.close();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				LOGGER.error("Error while termintating debug session and closing connection", e);
 			}
 		}
 
