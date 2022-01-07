@@ -16,26 +16,33 @@
  */
 package com.github.cameltooling.dap.internal;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.Set;
 
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
-import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
+import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.w3c.dom.Document;
 
 import com.sun.tools.attach.VirtualMachine;
 
 public class BacklogDebuggerConnectionManager {
 
+	private static final String OBJECTNAME_BACKLOGDEBUGGER = "org.apache.camel:context=*,type=tracer,name=BacklogDebugger";
+	private static final String OBJECTNAME_CAMELCONTEXT = "org.apache.camel:context=*,type=context,name=*";
 	private static final String DEFAULT_JMX_URI = "service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi";
 	private static final Logger LOGGER = LoggerFactory.getLogger(BacklogDebuggerConnectionManager.class);
 
@@ -44,6 +51,7 @@ public class BacklogDebuggerConnectionManager {
 	private JMXConnector jmxConnector;
 	private MBeanServerConnection mbeanConnection;
 	private ManagedBacklogDebuggerMBean backlogDebugger;
+	private Document routesDOMDocument;
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -69,19 +77,39 @@ public class BacklogDebuggerConnectionManager {
 			JMXServiceURL jmxUrl = new JMXServiceURL(jmxAddress);
 			jmxConnector = JMXConnectorFactory.connect(jmxUrl);
 			mbeanConnection = jmxConnector.getMBeanServerConnection();
-			ObjectName objectName = new ObjectName("org.apache.camel:context=*,type=tracer,name=BacklogDebugger");
+			ObjectName objectName = new ObjectName(OBJECTNAME_BACKLOGDEBUGGER);
 			Set<ObjectName> names = mbeanConnection.queryNames(objectName, null);
 			if (names != null && !names.isEmpty()) {
 				ObjectName debuggerMBeanObjectName = names.iterator().next();
-				backlogDebugger = JMX.newMBeanProxy(
-						mbeanConnection,
-						debuggerMBeanObjectName,
+				backlogDebugger = JMX.newMBeanProxy(mbeanConnection, debuggerMBeanObjectName,
 						ManagedBacklogDebuggerMBean.class);
+				backlogDebugger.enableDebugger();
+				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
 			} else {
 				LOGGER.warn("No BacklogDebugger found on connection with {}", jmxAddress);
 			}
-		} catch (IOException | MalformedObjectNameException e) {
+		} catch (Exception e) {
 			LOGGER.error("Error trying to attach", e);
+		}
+	}
+
+	private Document retrieveRoutesWithSourceLineNumber(String jmxAddress) throws Exception{
+		ObjectName camelContextObjectName = new ObjectName(OBJECTNAME_CAMELCONTEXT);
+		Set<ObjectName> camelContextMbeanNames = mbeanConnection.queryNames(camelContextObjectName, null);
+		if (camelContextMbeanNames != null && !camelContextMbeanNames.isEmpty()) {
+			ObjectName mbeanName = camelContextMbeanNames.iterator().next();
+			ManagedCamelContextMBean camelContext = JMX.newMBeanProxy(mbeanConnection, mbeanName,
+					ManagedCamelContextMBean.class);
+
+			String routes = camelContext.dumpRoutesAsXml(false, true);
+			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+			dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+			DocumentBuilder documentBuilder = dbf.newDocumentBuilder();
+			InputStream targetStream = new ByteArrayInputStream(routes.getBytes());
+			return documentBuilder.parse(targetStream);
+		} else {
+			LOGGER.warn("No Camel context found on connection with {}", jmxAddress);
+			return null;
 		}
 	}
 
@@ -102,6 +130,10 @@ public class BacklogDebuggerConnectionManager {
 
 	public ManagedBacklogDebuggerMBean getBacklogDebugger() {
 		return backlogDebugger;
+	}
+
+	public Document getRoutesDOMDocument() {
+		return routesDOMDocument;
 	}
 
 }
