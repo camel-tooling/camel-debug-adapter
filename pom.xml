@@ -113,12 +113,12 @@
 		<dependency>
 			<groupId>jakarta.xml.bind</groupId>
 			<artifactId>jakarta.xml.bind-api</artifactId>
-			<version>2.3.3</version>
+			<version>${version.jaxb}</version>
 		</dependency>
 		<dependency>
 			<groupId>com.sun.xml.bind</groupId>
 			<artifactId>jaxb-impl</artifactId>
-			<version>2.3.3</version>
+			<version>${version.jaxb}</version>
 			<scope>runtime</scope>
 		</dependency>
 
@@ -149,6 +149,12 @@
 			<groupId>org.apache.camel</groupId>
 			<artifactId>camel-debug</artifactId>
 			<version>${version.camel}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.awaitility</groupId>
+			<artifactId>awaitility</artifactId>
+			<version>4.1.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

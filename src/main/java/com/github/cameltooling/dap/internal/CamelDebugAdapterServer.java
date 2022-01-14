@@ -16,22 +16,39 @@
  */
 package com.github.cameltooling.dap.internal;
 
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.eclipse.lsp4j.debug.Breakpoint;
 import org.eclipse.lsp4j.debug.Capabilities;
+import org.eclipse.lsp4j.debug.ContinueArguments;
+import org.eclipse.lsp4j.debug.ContinueResponse;
+import org.eclipse.lsp4j.debug.DisconnectArguments;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
+import org.eclipse.lsp4j.debug.Scope;
+import org.eclipse.lsp4j.debug.ScopesArguments;
+import org.eclipse.lsp4j.debug.ScopesResponse;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse;
 import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.SourceBreakpoint;
+import org.eclipse.lsp4j.debug.StackFrame;
+import org.eclipse.lsp4j.debug.StackTraceArguments;
+import org.eclipse.lsp4j.debug.StackTraceResponse;
 import org.eclipse.lsp4j.debug.TerminateArguments;
+import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.ThreadsResponse;
+import org.eclipse.lsp4j.debug.Variable;
+import org.eclipse.lsp4j.debug.VariablesArguments;
+import org.eclipse.lsp4j.debug.VariablesResponse;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 import org.slf4j.Logger;
@@ -39,12 +56,21 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import com.github.cameltooling.dap.internal.types.EventMessage;
+import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
+
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
 
 	private IDebugProtocolClient client;
 	private BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
+	private Map<Integer, String> endpointVariableReferenceToBreakpointId = new HashMap<>();
+	private Map<Integer, String> frameIdToBreakpointId = new HashMap<>();
+	private Map<Integer, String> processorVariableReferenceToBreakpointId = new HashMap<>();
+	private Map<Integer, String> messagevariableReferenceToBreakpointId = new HashMap<>();
+	private Map<String, Source> breakpointIdToSource = new HashMap<>();
+	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -58,12 +84,13 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<Void> launch(Map<String, Object> args) {
-		return CompletableFuture.completedFuture(null);
+		// TODO: built-in Debug Configuration launch in Eclipse only allows to launch and not attach. So here is a trick.
+		return attach(args);
 	}
 	
 	@Override
 	public CompletableFuture<Void> attach(Map<String, Object> args) {
-		connectionManager.attach(args);
+		connectionManager.attach(args, client);
 		return CompletableFuture.completedFuture(null);
 	}
 	
@@ -92,6 +119,8 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				Node breakpointTagFromContext = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
 				if (breakpointTagFromContext != null) {
 					String breakpointId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
+					breakpointIdToSource.put(breakpointId, source);
+					breakpointIdToLine.put(breakpointId, line);
 					connectionManager.getBacklogDebugger().addBreakpoint(breakpointId);
 					breakpoint.setVerified(true);
 				}
@@ -105,12 +134,141 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<ThreadsResponse> threads() {
-		return CompletableFuture.completedFuture(new ThreadsResponse());
+		ThreadsResponse value = new ThreadsResponse();
+		Thread[] threads = new Thread[1];
+		Thread thread = new Thread();
+		thread.setId(0);
+		thread.setName("Camel context");
+		threads[0] = thread;
+		value.setThreads(threads);
+		return CompletableFuture.completedFuture(value);
+	}
+	
+	@Override
+	public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
+		StackTraceResponse response = new StackTraceResponse();
+		Set<StackFrame> stackFrames = new HashSet<>();
+		
+		Set<String> breakpointIds = connectionManager.getNotifiedSuspendedBreakpointIds();
+		for (String breakpointId : breakpointIds) {
+			StackFrame stackFrame = new StackFrame();
+			// TODO: compute a better name
+			stackFrame.setName(breakpointId);
+			// TODO: provide a better hashcode for stackframe containing the camelcontext too
+			int frameId = breakpointId.hashCode();
+			stackFrame.setId(frameId);
+			stackFrame.setSource(breakpointIdToSource.get(breakpointId));
+			stackFrame.setLine(breakpointIdToLine.get(breakpointId));
+			frameIdToBreakpointId.put(frameId, breakpointId);
+			stackFrames.add(stackFrame);
+		}
+		response.setStackFrames(stackFrames.toArray(new StackFrame[stackFrames.size()]) );
+		return CompletableFuture.completedFuture(response);
+	}
+	
+	@Override
+	public CompletableFuture<ScopesResponse> scopes(ScopesArguments args) {
+		ScopesResponse response = new ScopesResponse();
+		String breakpointId = frameIdToBreakpointId.get(args.getFrameId());
+		Set<Scope> scopes = new HashSet<>();
+		
+		// Debugger
+		Scope debuggerScope = new Scope();
+		debuggerScope.setName("Debugger");
+		scopes.add(debuggerScope);
+		
+		// Current Endpoint
+		Scope endpointScope = new Scope();
+		endpointScope.setName("Endpoint");
+		int endpointsVariableRefId = ("@endpoint@"+breakpointId).hashCode();
+		endpointScope.setVariablesReference(endpointsVariableRefId);
+		endpointVariableReferenceToBreakpointId.put(endpointsVariableRefId, breakpointId);
+		scopes.add(endpointScope);
+					
+		// Processor
+		Scope processorScope = new Scope();
+		processorScope.setName("Processor");
+		int processorVarRefId = ("@Processor@"+breakpointId).hashCode();
+		processorScope.setVariablesReference(processorVarRefId);
+		scopes.add(processorScope);
+		processorVariableReferenceToBreakpointId.put(processorVarRefId, breakpointId);
+		
+		// Exchange
+		Scope exchangeScope = new Scope();
+		exchangeScope.setName("Exchange");
+		scopes.add(exchangeScope);
+					
+		// Message
+		Scope messageScope = new Scope();
+		messageScope.setName("Message");
+		int messageVariableRefId = ("@message@"+breakpointId).hashCode();
+		messagevariableReferenceToBreakpointId .put(messageVariableRefId, breakpointId);
+		messageScope.setVariablesReference(messageVariableRefId);
+		scopes.add(messageScope);
+		
+		response.setScopes(scopes.toArray(new Scope[scopes.size()]));
+		return CompletableFuture.completedFuture(response);
+	}
+	
+	@Override
+	public CompletableFuture<VariablesResponse> variables(VariablesArguments args) {
+		int variablesReference = args.getVariablesReference();
+		VariablesResponse response = new VariablesResponse();
+		Set<Variable> variables = new HashSet<>();
+
+		ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
+		
+		String breakpointId = endpointVariableReferenceToBreakpointId.get(variablesReference);
+		if (breakpointId != null) {
+			//TODO: retrieve name instead of ID
+			variables.add(createVariable("Name", breakpointId));
+		}
+		breakpointId = messagevariableReferenceToBreakpointId.get(variablesReference);
+		if (breakpointId != null) {
+			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);			
+			EventMessage message = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
+			if(message != null) {
+				variables.add(createVariable("Exchange ID", message.getExchangeId()));
+				variables.add(createVariable("Body", message.getMessage().getBody()));
+				//TODO: headers
+				//TODO: exchange properties
+			}
+		}
+		breakpointId = processorVariableReferenceToBreakpointId.get(variablesReference);
+		if (breakpointId != null){
+			variables.add(createVariable("Processor Id", breakpointId));
+			//variables.add(createVariable("Route Id", connectionManager.getBacklogDebugger().getRouteId(breakpointId)));
+			variables.add(createVariable("Camel Id", debugger.getCamelId()));
+			//variables.add(createVariable("Completed Exchange", debugger.getCompletedExchanges(breakpointId)));
+		}
+			
+		response.setVariables(variables.toArray(new Variable[variables.size()]));
+		return CompletableFuture.completedFuture(response);
+	}
+
+	private Variable createVariable(String variableName, String variableValue) {
+		Variable processorIdVariable = new Variable();
+		processorIdVariable.setName(variableName);
+		processorIdVariable.setValue(variableValue);
+		return processorIdVariable;
+	}
+	
+	@Override
+	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {	
+		connectionManager.getBacklogDebugger().resumeAll();
+		// TODO: clear cache of suspended breakpointid
+		return CompletableFuture.completedFuture(new ContinueResponse());
 	}
 	
 	@Override
 	public CompletableFuture<Void> terminate(TerminateArguments args) {
-		getConnectionManager().terminate();
+		connectionManager.terminate();
+		return CompletableFuture.completedFuture(null);
+	}
+	
+	@Override
+	public CompletableFuture<Void> disconnect(DisconnectArguments args) {
+		connectionManager.terminate();
 		return CompletableFuture.completedFuture(null);
 	}
 

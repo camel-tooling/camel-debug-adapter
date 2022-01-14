@@ -19,6 +19,7 @@ package com.github.cameltooling.dap.internal;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,6 +34,9 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
+import org.eclipse.lsp4j.debug.StoppedEventArguments;
+import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
@@ -52,6 +56,8 @@ public class BacklogDebuggerConnectionManager {
 	private MBeanServerConnection mbeanConnection;
 	private ManagedBacklogDebuggerMBean backlogDebugger;
 	private Document routesDOMDocument;
+	private IDebugProtocolClient client;
+	private Set<String> notifiedSuspendedBreakpointIds = new HashSet<>();
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -67,7 +73,8 @@ public class BacklogDebuggerConnectionManager {
 		}
 	}
 
-	public void attach(Map<String, Object> args) {
+	public void attach(Map<String, Object> args, IDebugProtocolClient client) {
+		this.client = client;
 		try {
 			String jmxAddress = DEFAULT_JMX_URI;
 			Object pid = args.get(ATTACH_PARAM_PID);
@@ -85,12 +92,41 @@ public class BacklogDebuggerConnectionManager {
 						ManagedBacklogDebuggerMBean.class);
 				backlogDebugger.enableDebugger();
 				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
+				
+				Thread checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints, "Camel DAP - Check Suspended node");
+				checkSuspendedNodeThread.start();
 			} else {
 				LOGGER.warn("No BacklogDebugger found on connection with {}", jmxAddress);
 			}
 		} catch (Exception e) {
 			LOGGER.error("Error trying to attach", e);
 		}
+	}
+
+	private void checkSuspendedBreakpoints() {
+		while(backlogDebugger != null && backlogDebugger.isEnabled()) {
+			Set<String> suspendedBreakpointNodeIds = backlogDebugger.suspendedBreakpointNodeIds();
+			// TODO: ensure list is cleaned at a time
+			for (String nodeId : suspendedBreakpointNodeIds) {
+				if (!getNotifiedSuspendedBreakpointIds().contains(nodeId)) {
+					StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
+					stoppedEventArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT);
+					stoppedEventArgs.setThreadId(0);
+					getNotifiedSuspendedBreakpointIds().add(nodeId);
+					client.stopped(stoppedEventArgs);
+				}
+			}
+			
+			// TODO: might worth updating routesDomDocument?
+			
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+				return;
+			}
+		}
+		
 	}
 
 	private Document retrieveRoutesWithSourceLineNumber(String jmxAddress) throws Exception{
@@ -121,7 +157,6 @@ public class BacklogDebuggerConnectionManager {
 				LOGGER.error("Error while termintating debug session and closing connection", e);
 			}
 		}
-
 	}
 
 	public MBeanServerConnection getMbeanConnection() {
@@ -134,6 +169,10 @@ public class BacklogDebuggerConnectionManager {
 
 	public Document getRoutesDOMDocument() {
 		return routesDOMDocument;
+	}
+
+	public Set<String> getNotifiedSuspendedBreakpointIds() {
+		return notifiedSuspendedBreakpointIds;
 	}
 
 }

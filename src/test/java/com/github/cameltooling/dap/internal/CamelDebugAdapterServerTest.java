@@ -17,8 +17,10 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.io.File;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -27,13 +29,17 @@ import java.util.concurrent.ExecutionException;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.Breakpoint;
 import org.eclipse.lsp4j.debug.Capabilities;
+import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse;
 import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.SourceBreakpoint;
+import org.eclipse.lsp4j.debug.StoppedEventArguments;
+import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.TerminateArguments;
 import org.eclipse.lsp4j.debug.TerminatedEventArguments;
 import org.junit.jupiter.api.AfterEach;
@@ -61,7 +67,6 @@ class CamelDebugAdapterServerTest {
 		CompletableFuture<Capabilities> initialization = initDebugger();
 		assertThat(initialization.get()).isNotNull();
 		assertThat(clientProxy.hasReceivedInitializedEvent()).isTrue();
-		
 	}
 	
 	@Test
@@ -87,8 +92,15 @@ class CamelDebugAdapterServerTest {
 		}
 	}
 	
+	/**
+	 * Basic flow:
+	 * - set breakpoint
+	 * - start route
+	 * - hit breakpoint
+	 * - continue
+	 */
 	@Test
-	void testSetBreakpoint() throws Exception {
+	void testBasicFlow() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
 			context.addRoutes(new RouteBuilder() {
 			
@@ -98,7 +110,7 @@ class CamelDebugAdapterServerTest {
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 98;
+			int lineNumberToPutBreakpoint = 110;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -117,9 +129,43 @@ class CamelDebugAdapterServerTest {
 			assertThat(responseBreakpoint.isVerified()).isTrue();
 			Set<String> breakpointsSetInCamel = connectionManager.getBacklogDebugger().breakpoints();
 			assertThat(breakpointsSetInCamel).hasSize(1);
+
+			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testSetBreakpoint");
+			producerTemplate.start();
+			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testSetBreakpoint", "a body for test");
 			
-			//TODO: trigger the route and check that we have a suspended breakpoint
+			await("Wait that breakpoint hit is notified")
+				.atMost(Duration.ofSeconds(3))
+				.until(() -> 
+				{ 
+					return clientProxy.getStoppedEventArguments().size() == 1;
+				
+				});
+			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
+			assertThat(stoppedEventArgument.getThreadId()).isZero();
+			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			
+			assertThat(asyncSendBody.isDone()).isFalse();
+			
+			assertThat(clientProxy.getAllStacksAndVars()).hasSize(1);
+			StackAndVarOnStopEvent stackAndData = clientProxy.getAllStacksAndVars().get(0);
+			assertThat(stackAndData.getThreads()).hasSize(1);
+			assertThat(stackAndData.getStackFrames()).hasSize(1);
+			assertThat(stackAndData.getScopes()).hasSize(5);
+			await("handling of stop event response is finished")
+			 .atMost(Duration.ofSeconds(2))
+			 .until(() -> stackAndData.getVariables().size() == 5);
+			//TODO: check exact content of variables and maybe even by updating capture of arguments
+			
+			server.continue_(new ContinueArguments());
+			
+			await("Wait that route has resumed and is finished")
+				.atMost(Duration.ofSeconds(3))
+				.until(() -> {
+					return asyncSendBody.isDone();
+				});
+			
+			producerTemplate.stop();
 		}
 	}
 
@@ -139,7 +185,7 @@ class CamelDebugAdapterServerTest {
 	
 	private CompletableFuture<Capabilities> initDebugger() {
 		server = new CamelDebugAdapterServer();
-		clientProxy = new DummyCamelDebugClient();
+		clientProxy = new DummyCamelDebugClient(server);
 		server.connect(clientProxy);
 		return server.initialize(new InitializeRequestArguments());
 	}
