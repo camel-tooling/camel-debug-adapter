@@ -22,6 +22,7 @@ import static org.awaitility.Awaitility.await;
 import java.io.File;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -42,6 +43,7 @@ import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.TerminateArguments;
 import org.eclipse.lsp4j.debug.TerminatedEventArguments;
+import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -110,7 +112,7 @@ class CamelDebugAdapterServerTest {
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 110;
+			int lineNumberToPutBreakpoint = 112;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -132,14 +134,14 @@ class CamelDebugAdapterServerTest {
 
 			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testSetBreakpoint");
 			producerTemplate.start();
-			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testSetBreakpoint", "a body for test");
+			String body = "a body for test";
+			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testSetBreakpoint", body);
 			
 			await("Wait that breakpoint hit is notified")
 				.atMost(Duration.ofSeconds(3))
 				.until(() -> 
 				{ 
 					return clientProxy.getStoppedEventArguments().size() == 1;
-				
 				});
 			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
 			assertThat(stoppedEventArgument.getThreadId()).isZero();
@@ -154,8 +156,19 @@ class CamelDebugAdapterServerTest {
 			assertThat(stackAndData.getScopes()).hasSize(5);
 			await("handling of stop event response is finished")
 			 .atMost(Duration.ofSeconds(2))
-			 .until(() -> stackAndData.getVariables().size() == 5);
+			 .until(() -> stackAndData.getVariables().size() == 12);
+			List<Variable> variables = stackAndData.getVariables();
+			assertThat(variables)
+				.contains(
+						createVariable("Body", body),
+						createVariable("Logging level","INFO"),
+						createVariable("Max chars for body", "131072"),
+						createVariable("Fallback timeout", "300"),
+						createVariable("Debug counter", "1"),
+						createVariable("Body include files", "true"),
+						createVariable("Body include streams", "false"));
 			//TODO: check exact content of variables and maybe even by updating capture of arguments
+			
 			
 			server.continue_(new ContinueArguments());
 			
@@ -167,6 +180,13 @@ class CamelDebugAdapterServerTest {
 			
 			producerTemplate.stop();
 		}
+	}
+
+	private Variable createVariable(String name, String value) {
+		Variable bodyVariable = new Variable();
+		bodyVariable.setName(name);
+		bodyVariable.setValue(value);
+		return bodyVariable;
 	}
 
 	private SetBreakpointsArguments createSetBreakpointArgument(int lineNumberToPutBreakpoint) {
