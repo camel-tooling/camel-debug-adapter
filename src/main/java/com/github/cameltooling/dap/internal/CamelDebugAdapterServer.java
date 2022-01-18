@@ -294,8 +294,15 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {	
-		connectionManager.getBacklogDebugger().resumeAll();
-		// TODO: clear cache of suspended breakpointid
+		debuggerVariableReferenceToBreakpointId.clear();
+		endpointVariableReferenceToBreakpointId.clear();
+		exchangeVariableReferenceToBreakpointId.clear();
+		frameIdToBreakpointId.clear();
+		headersVariableReferenceToHeaders.clear();
+		messagevariableReferenceToBreakpointId.clear();
+		processorVariableReferenceToBreakpointId.clear();
+		variableReferenceToExchangeProperties.clear();
+		connectionManager.resumeAll();
 		return CompletableFuture.completedFuture(new ContinueResponse());
 	}
 	

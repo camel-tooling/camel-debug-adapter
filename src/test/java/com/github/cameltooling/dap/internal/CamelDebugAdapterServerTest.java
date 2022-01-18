@@ -193,6 +193,71 @@ class CamelDebugAdapterServerTest {
 			producerTemplate.stop();
 		}
 	}
+	
+	@Test
+	void testResume() throws Exception {
+		try (CamelContext context = new DefaultCamelContext()) {
+			String routeId = "a-route-id";
+			context.addRoutes(new RouteBuilder() {
+			
+				@Override
+				public void configure() throws Exception {
+					from("direct:testResume")
+						.routeId(routeId)
+						.log("Log from test");  // line number to use from here
+				}
+			});
+			int lineNumberToPutBreakpoint = 207;
+			context.start();
+			assertThat(context.isStarted()).isTrue();
+			initDebugger();
+			server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid())));
+			BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
+			assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
+			assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
+			
+			server.setBreakpoints(setBreakpointsArguments).get();
+			
+			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testResume");
+			producerTemplate.start();
+			
+			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testResume", "a body");
+			
+			await("Wait that breakpoint hit is notified")
+				.atMost(Duration.ofSeconds(3))
+				.until(() -> 
+				{ 
+					return clientProxy.getStoppedEventArguments().size() == 1;
+				});
+			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
+			assertThat(stoppedEventArgument.getThreadId()).isZero();
+			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
+			
+			assertThat(asyncSendBody.isDone()).isFalse();
+			
+			server.continue_(new ContinueArguments());
+			
+			await("Wait that route has resumed and is finished")
+				.atMost(Duration.ofSeconds(3))
+				.until(() -> {
+					return asyncSendBody.isDone();
+				});
+			
+			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody("direct:testResume", "a body 2");
+			
+			assertThat(asyncSendBody2.isDone()).isFalse();
+			
+			await("Wait that second breakpoint hit is notified")
+			.atMost(Duration.ofSeconds(3))
+			.until(() -> 
+			{ 
+				return clientProxy.getStoppedEventArguments().size() == 2;
+			});
+			
+			producerTemplate.stop();
+		}
+	}
 
 	private Variable createVariable(String name, String value) {
 		Variable bodyVariable = new Variable();
