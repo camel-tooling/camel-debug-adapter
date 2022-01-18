@@ -150,6 +150,9 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	public void terminate() {
+		if (backlogDebugger != null) {
+			backlogDebugger = null;
+		}
 		if (jmxConnector != null) {
 			try {
 				jmxConnector.close();
@@ -173,6 +176,11 @@ public class BacklogDebuggerConnectionManager {
 
 	public Set<String> getNotifiedSuspendedBreakpointIds() {
 		return notifiedSuspendedBreakpointIds;
+	}
+
+	public void resumeAll() {
+		backlogDebugger.resumeAll();
+		notifiedSuspendedBreakpointIds.clear();
 	}
 
 }
