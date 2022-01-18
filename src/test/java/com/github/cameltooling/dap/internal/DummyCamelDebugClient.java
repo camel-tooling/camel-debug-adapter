@@ -30,6 +30,7 @@ import org.eclipse.lsp4j.debug.StackTraceResponse;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.ThreadsResponse;
+import org.eclipse.lsp4j.debug.Variable;
 import org.eclipse.lsp4j.debug.VariablesArguments;
 import org.eclipse.lsp4j.debug.VariablesResponse;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
@@ -85,7 +86,17 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 						//System.out.println("scopeVarReference " + scopeVarReference);
 						VariablesResponse variablesResponse = server.variables(varArguments).get();
 						//System.out.println("variables: " + variablesResponse.getVariables().length);
-						allData.addVariables(Arrays.asList(variablesResponse.getVariables()));
+						Variable[] variables = variablesResponse.getVariables();
+						allData.addVariables(Arrays.asList(variables));
+						for (Variable variable : variables) {
+							if (variable.getVariablesReference() != 0) {
+								VariablesArguments secondLevelVarArguments = new VariablesArguments();
+								secondLevelVarArguments.setVariablesReference(variable.getVariablesReference());
+								VariablesResponse secondLevelVariablesResponse = server.variables(secondLevelVarArguments).get();
+								Variable[] secondlevelVariables = secondLevelVariablesResponse.getVariables();
+								allData.addVariables(Arrays.asList(secondlevelVariables));
+							}
+						}
 					}
 				}
 			}

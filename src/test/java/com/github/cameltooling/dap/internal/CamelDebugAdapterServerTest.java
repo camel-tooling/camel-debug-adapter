@@ -111,10 +111,12 @@ class CamelDebugAdapterServerTest {
 				public void configure() throws Exception {
 					from("direct:testSetBreakpoint")
 						.routeId(routeId)
+						.setHeader("header1", constant("value of header 1"))
+						.setHeader("header2", constant("value of header 2"))
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 114;
+			int lineNumberToPutBreakpoint = 116;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -157,8 +159,10 @@ class CamelDebugAdapterServerTest {
 			assertThat(stackAndData.getStackFrames()).hasSize(1);
 			assertThat(stackAndData.getScopes()).hasSize(5);
 			await("handling of stop event response is finished")
-			 .atMost(Duration.ofSeconds(2))
-			 .until(() -> stackAndData.getVariables().size() == 15);
+			 .atMost(Duration.ofSeconds(60))
+			 .until(() -> {
+				 return stackAndData.getVariables().size() == 18;
+			 });
 			List<Variable> variables = stackAndData.getVariables();
 			assertThat(variables)
 				.contains(
@@ -170,9 +174,9 @@ class CamelDebugAdapterServerTest {
 						createVariable("Body include files", "true"),
 						createVariable("Body include streams", "false"),
 						createVariable("To node", "log1"),
-						createVariable("Route ID", routeId)
-						
-						);
+						createVariable("Route ID", routeId),
+						createVariable("header1", "value of header 1"),
+						createVariable("header2", "value of header 2"));
 			//TODO: check exact content of variables and maybe even by updating capture of arguments
 			
 			
