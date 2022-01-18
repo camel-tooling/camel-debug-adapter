@@ -162,7 +162,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			// TODO: compute a better name
 			stackFrame.setName(breakpointId);
 			// TODO: provide a better hashcode for stackframe containing the camelcontext too
-			int frameId = breakpointId.hashCode();
+			int frameId = getPositiveIntFromHashCode(breakpointId.hashCode());
 			stackFrame.setId(frameId);
 			stackFrame.setSource(breakpointIdToSource.get(breakpointId));
 			stackFrame.setLine(breakpointIdToLine.get(breakpointId));
@@ -192,10 +192,14 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Scope createScope(String name, String breakpointId, Map<Integer, String> variableReferences) {
 		Scope scope = new Scope();
 		scope.setName(name);
-		int variableRefId = ("@"+ name + "@" + breakpointId).hashCode();
+		int variableRefId = getPositiveIntFromHashCode(("@"+ name + "@" + breakpointId).hashCode());
 		scope.setVariablesReference(variableRefId);
 		variableReferences.put(variableRefId, breakpointId);
 		return scope;
+	}
+
+	private int getPositiveIntFromHashCode(int hashCode) {
+		return hashCode & 0x7fffffff;
 	}
 	
 	@Override
@@ -221,7 +225,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
 				Variable headersVariable = new Variable();
 				headersVariable.setName("Headers");
-				int headerVarRefId = (variablesReference+"@headers@").hashCode();
+				int headerVarRefId = getPositiveIntFromHashCode((variablesReference+"@headers@").hashCode());
 				headersVariableReferenceToHeaders.put(headerVarRefId, eventMessage.getMessage().getHeaders());
 				headersVariable.setVariablesReference(headerVarRefId);
 				variables.add(headersVariable);
@@ -263,7 +267,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
 				Variable exchangeVariable = new Variable();
 				exchangeVariable.setName("Properties");
-				int exchangeVarRefId = (variablesReference+"@exchange@").hashCode();
+				int exchangeVarRefId = getPositiveIntFromHashCode((variablesReference+"@exchange@").hashCode());
 				variableReferenceToExchangeProperties.put(exchangeVarRefId, eventMessage.getExchangeProperties());
 				exchangeVariable.setVariablesReference(exchangeVarRefId);
 				variables.add(exchangeVariable);
