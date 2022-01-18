@@ -58,6 +58,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import com.github.cameltooling.dap.internal.types.EventMessage;
+import com.github.cameltooling.dap.internal.types.ExchangeProperty;
 import com.github.cameltooling.dap.internal.types.Header;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
@@ -74,10 +75,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Map<Integer, String> debuggerVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, String> exchangeVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, List<Header>> headersVariableReferenceToHeaders = new HashMap<>();
+	private Map<Integer, List<ExchangeProperty>> variableReferenceToExchangeProperties = new HashMap<>();
 	private Map<String, Source> breakpointIdToSource = new HashMap<>();
 	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
-
-
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -238,9 +238,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		breakpointId = processorVariableReferenceToBreakpointId.get(variablesReference);
 		if (breakpointId != null){
 			variables.add(createVariable("Processor Id", breakpointId));
-			//variables.add(createVariable("Route Id", connectionManager.getBacklogDebugger().getRouteId(breakpointId)));
+			//TODO: variables.add(createVariable("Route Id", connectionManager.getBacklogDebugger().getRouteId(breakpointId)));
 			variables.add(createVariable("Camel Id", debugger.getCamelId()));
-			//variables.add(createVariable("Completed Exchange", debugger.getCompletedExchanges(breakpointId)));
+			//TODO: variables.add(createVariable("Completed Exchange", debugger.getCompletedExchanges(breakpointId)));
 		}
 		
 		breakpointId = debuggerVariableReferenceToBreakpointId.get(variablesReference);
@@ -261,7 +261,19 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("ID", eventMessage.getExchangeId()));
 				variables.add(createVariable("To node", eventMessage.getToNode()));
 				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
-				//TODO: exchange properties
+				Variable exchangeVariable = new Variable();
+				exchangeVariable.setName("Properties");
+				int exchangeVarRefId = (variablesReference+"@exchange@").hashCode();
+				variableReferenceToExchangeProperties.put(exchangeVarRefId, eventMessage.getExchangeProperties());
+				exchangeVariable.setVariablesReference(exchangeVarRefId);
+				variables.add(exchangeVariable);
+			}
+		}
+		
+		List<ExchangeProperty> exchangeProperties = variableReferenceToExchangeProperties.get(variablesReference);
+		if (exchangeProperties != null) {
+			for (ExchangeProperty exchangeProperty : exchangeProperties) {
+				variables.add(createVariable(exchangeProperty.getName(), exchangeProperty.getContent()));
 			}
 		}
 		
