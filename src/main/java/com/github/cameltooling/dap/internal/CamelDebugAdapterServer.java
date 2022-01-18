@@ -18,6 +18,7 @@ package com.github.cameltooling.dap.internal;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -57,6 +58,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import com.github.cameltooling.dap.internal.types.EventMessage;
+import com.github.cameltooling.dap.internal.types.Header;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
@@ -71,8 +73,10 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Map<Integer, String> messagevariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, String> debuggerVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, String> exchangeVariableReferenceToBreakpointId = new HashMap<>();
+	private Map<Integer, List<Header>> headersVariableReferenceToHeaders = new HashMap<>();
 	private Map<String, Source> breakpointIdToSource = new HashMap<>();
 	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
+
 
 
 	public void connect(IDebugProtocolClient clientProxy) {
@@ -175,48 +179,23 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		String breakpointId = frameIdToBreakpointId.get(args.getFrameId());
 		Set<Scope> scopes = new HashSet<>();
 		
-		// Debugger
-		Scope debuggerScope = new Scope();
-		debuggerScope.setName("Debugger");
-		int debuggerVariableRedId = ("@debugger@"+breakpointId).hashCode();
-		debuggerScope.setVariablesReference(debuggerVariableRedId);
-		debuggerVariableReferenceToBreakpointId.put(debuggerVariableRedId, breakpointId);
-		scopes.add(debuggerScope);
-		
-		// Current Endpoint
-		Scope endpointScope = new Scope();
-		endpointScope.setName("Endpoint");
-		int endpointsVariableRefId = ("@endpoint@"+breakpointId).hashCode();
-		endpointScope.setVariablesReference(endpointsVariableRefId);
-		endpointVariableReferenceToBreakpointId.put(endpointsVariableRefId, breakpointId);
-		scopes.add(endpointScope);
-					
-		// Processor
-		Scope processorScope = new Scope();
-		processorScope.setName("Processor");
-		int processorVarRefId = ("@Processor@"+breakpointId).hashCode();
-		processorScope.setVariablesReference(processorVarRefId);
-		scopes.add(processorScope);
-		processorVariableReferenceToBreakpointId.put(processorVarRefId, breakpointId);
-		
-		// Exchange
-		Scope exchangeScope = new Scope();
-		exchangeScope.setName("Exchange");
-		int exchangeVarRefId = ("@exchange@"+breakpointId).hashCode();
-		exchangeScope.setVariablesReference(exchangeVarRefId);
-		exchangeVariableReferenceToBreakpointId.put(exchangeVarRefId, breakpointId);
-		scopes.add(exchangeScope);
-					
-		// Message
-		Scope messageScope = new Scope();
-		messageScope.setName("Message");
-		int messageVariableRefId = ("@message@"+breakpointId).hashCode();
-		messagevariableReferenceToBreakpointId .put(messageVariableRefId, breakpointId);
-		messageScope.setVariablesReference(messageVariableRefId);
-		scopes.add(messageScope);
+		scopes.add(createScope("Debugger", breakpointId, debuggerVariableReferenceToBreakpointId));
+		scopes.add(createScope("Endpoint", breakpointId, endpointVariableReferenceToBreakpointId));
+		scopes.add(createScope("Processor", breakpointId, processorVariableReferenceToBreakpointId));
+		scopes.add(createScope("Exchange", breakpointId, exchangeVariableReferenceToBreakpointId));
+		scopes.add(createScope("Message", breakpointId, messagevariableReferenceToBreakpointId));
 		
 		response.setScopes(scopes.toArray(new Scope[scopes.size()]));
 		return CompletableFuture.completedFuture(response);
+	}
+
+	private Scope createScope(String name, String breakpointId, Map<Integer, String> variableReferences) {
+		Scope scope = new Scope();
+		scope.setName(name);
+		int variableRefId = ("@"+ name + "@" + breakpointId).hashCode();
+		scope.setVariablesReference(variableRefId);
+		variableReferences.put(variableRefId, breakpointId);
+		return scope;
 	}
 	
 	@Override
@@ -240,10 +219,22 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
 				variables.add(createVariable("UID", Long.toString(eventMessage.getUid())));
 				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
-				//TODO: headers
-				//TODO: exchange properties
+				Variable headersVariable = new Variable();
+				headersVariable.setName("Headers");
+				int headerVarRefId = (variablesReference+"@headers@").hashCode();
+				headersVariableReferenceToHeaders.put(headerVarRefId, eventMessage.getMessage().getHeaders());
+				headersVariable.setVariablesReference(headerVarRefId);
+				variables.add(headersVariable);
 			}
 		}
+		
+		List<Header> headers = headersVariableReferenceToHeaders.get(variablesReference);
+		if(headers != null) {
+			for (Header header : headers) {
+				variables.add(createVariable(header.getKey(), header.getValue()));
+			}
+		}
+		
 		breakpointId = processorVariableReferenceToBreakpointId.get(variablesReference);
 		if (breakpointId != null){
 			variables.add(createVariable("Processor Id", breakpointId));
