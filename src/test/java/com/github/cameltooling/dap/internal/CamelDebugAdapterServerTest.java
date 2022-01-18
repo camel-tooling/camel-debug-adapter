@@ -113,10 +113,12 @@ class CamelDebugAdapterServerTest {
 						.routeId(routeId)
 						.setHeader("header1", constant("value of header 1"))
 						.setHeader("header2", constant("value of header 2"))
+						.setProperty("property1", constant("value of property 1"))
+						.setProperty("property2", constant("value of property 2"))
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 116;
+			int lineNumberToPutBreakpoint = 118;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -161,7 +163,7 @@ class CamelDebugAdapterServerTest {
 			await("handling of stop event response is finished")
 			 .atMost(Duration.ofSeconds(60))
 			 .until(() -> {
-				 return stackAndData.getVariables().size() == 18;
+				 return stackAndData.getVariables().size() == 23;
 			 });
 			List<Variable> variables = stackAndData.getVariables();
 			assertThat(variables)
@@ -176,9 +178,9 @@ class CamelDebugAdapterServerTest {
 						createVariable("To node", "log1"),
 						createVariable("Route ID", routeId),
 						createVariable("header1", "value of header 1"),
-						createVariable("header2", "value of header 2"));
-			//TODO: check exact content of variables and maybe even by updating capture of arguments
-			
+						createVariable("header2", "value of header 2"),
+						createVariable("property1", "value of property 1"),
+						createVariable("property2", "value of property 2"));		
 			
 			server.continue_(new ContinueArguments());
 			
