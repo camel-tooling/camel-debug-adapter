@@ -30,6 +30,8 @@
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 
 		<version.camel>3.15.0-SNAPSHOT</version.camel>
+		<!-- must be aligned with the one from Camel -->
+		<version.jaxb>2.3.3</version.jaxb>
 	</properties>
 
 	<build>
@@ -107,6 +109,17 @@
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-slf4j-impl</artifactId>
 			<version>2.17.1</version>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+			<version>2.3.3</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.xml.bind</groupId>
+			<artifactId>jaxb-impl</artifactId>
+			<version>2.3.3</version>
+			<scope>runtime</scope>
 		</dependency>
 
 		<dependency>
