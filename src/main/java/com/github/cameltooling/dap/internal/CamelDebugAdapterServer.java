@@ -69,6 +69,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Map<Integer, String> frameIdToBreakpointId = new HashMap<>();
 	private Map<Integer, String> processorVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, String> messagevariableReferenceToBreakpointId = new HashMap<>();
+	private Map<Integer, String> debuggerVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<String, Source> breakpointIdToSource = new HashMap<>();
 	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
 
@@ -175,6 +176,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		// Debugger
 		Scope debuggerScope = new Scope();
 		debuggerScope.setName("Debugger");
+		int debuggerVariableRedId = ("@debugger@"+breakpointId).hashCode();
+		debuggerScope.setVariablesReference(debuggerVariableRedId);
+		debuggerVariableReferenceToBreakpointId.put(debuggerVariableRedId, breakpointId);
 		scopes.add(debuggerScope);
 		
 		// Current Endpoint
@@ -226,10 +230,11 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		breakpointId = messagevariableReferenceToBreakpointId.get(variablesReference);
 		if (breakpointId != null) {
 			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);			
-			EventMessage message = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
-			if(message != null) {
-				variables.add(createVariable("Exchange ID", message.getExchangeId()));
-				variables.add(createVariable("Body", message.getMessage().getBody()));
+			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
+			if(eventMessage != null) {
+				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
+				variables.add(createVariable("UID", Long.toString(eventMessage.getUid())));
+				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
 				//TODO: headers
 				//TODO: exchange properties
 			}
@@ -241,7 +246,17 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			variables.add(createVariable("Camel Id", debugger.getCamelId()));
 			//variables.add(createVariable("Completed Exchange", debugger.getCompletedExchanges(breakpointId)));
 		}
-			
+		
+		breakpointId = debuggerVariableReferenceToBreakpointId.get(variablesReference);
+		if(breakpointId != null) {
+			variables.add(createVariable("Logging level", connectionManager.getBacklogDebugger().getLoggingLevel()));
+			variables.add(createVariable("Max chars for body", Integer.toString(connectionManager.getBacklogDebugger().getBodyMaxChars())));
+			variables.add(createVariable("Debug counter", Long.toString(connectionManager.getBacklogDebugger().getDebugCounter())));
+			variables.add(createVariable("Fallback timeout", Long.toString(connectionManager.getBacklogDebugger().getFallbackTimeout())));
+			variables.add(createVariable("Body include files", Boolean.toString(connectionManager.getBacklogDebugger().isBodyIncludeFiles())));
+			variables.add(createVariable("Body include streams", Boolean.toString(connectionManager.getBacklogDebugger().isBodyIncludeStreams())));
+		}
+		
 		response.setVariables(variables.toArray(new Variable[variables.size()]));
 		return CompletableFuture.completedFuture(response);
 	}
