@@ -70,8 +70,10 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Map<Integer, String> processorVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, String> messagevariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, String> debuggerVariableReferenceToBreakpointId = new HashMap<>();
+	private Map<Integer, String> exchangeVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<String, Source> breakpointIdToSource = new HashMap<>();
 	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
+
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -200,6 +202,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		// Exchange
 		Scope exchangeScope = new Scope();
 		exchangeScope.setName("Exchange");
+		int exchangeVarRefId = ("@exchange@"+breakpointId).hashCode();
+		exchangeScope.setVariablesReference(exchangeVarRefId);
+		exchangeVariableReferenceToBreakpointId.put(exchangeVarRefId, breakpointId);
 		scopes.add(exchangeScope);
 					
 		// Message
@@ -229,7 +234,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		}
 		breakpointId = messagevariableReferenceToBreakpointId.get(variablesReference);
 		if (breakpointId != null) {
-			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);			
+			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			if(eventMessage != null) {
 				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
@@ -255,6 +260,18 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			variables.add(createVariable("Fallback timeout", Long.toString(connectionManager.getBacklogDebugger().getFallbackTimeout())));
 			variables.add(createVariable("Body include files", Boolean.toString(connectionManager.getBacklogDebugger().isBodyIncludeFiles())));
 			variables.add(createVariable("Body include streams", Boolean.toString(connectionManager.getBacklogDebugger().isBodyIncludeStreams())));
+		}
+		
+		breakpointId = exchangeVariableReferenceToBreakpointId.get(variablesReference);
+		if(breakpointId != null) {
+			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);
+			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
+			if(eventMessage != null) {
+				variables.add(createVariable("ID", eventMessage.getExchangeId()));
+				variables.add(createVariable("To node", eventMessage.getToNode()));
+				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
+				//TODO: exchange properties
+			}
 		}
 		
 		response.setVariables(variables.toArray(new Variable[variables.size()]));

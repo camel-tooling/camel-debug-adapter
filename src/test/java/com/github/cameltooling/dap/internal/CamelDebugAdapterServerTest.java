@@ -104,15 +104,17 @@ class CamelDebugAdapterServerTest {
 	@Test
 	void testBasicFlow() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
+			String routeId = "a-route-id";
 			context.addRoutes(new RouteBuilder() {
 			
 				@Override
 				public void configure() throws Exception {
 					from("direct:testSetBreakpoint")
+						.routeId(routeId)
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 112;
+			int lineNumberToPutBreakpoint = 114;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -156,7 +158,7 @@ class CamelDebugAdapterServerTest {
 			assertThat(stackAndData.getScopes()).hasSize(5);
 			await("handling of stop event response is finished")
 			 .atMost(Duration.ofSeconds(2))
-			 .until(() -> stackAndData.getVariables().size() == 12);
+			 .until(() -> stackAndData.getVariables().size() == 15);
 			List<Variable> variables = stackAndData.getVariables();
 			assertThat(variables)
 				.contains(
@@ -166,7 +168,11 @@ class CamelDebugAdapterServerTest {
 						createVariable("Fallback timeout", "300"),
 						createVariable("Debug counter", "1"),
 						createVariable("Body include files", "true"),
-						createVariable("Body include streams", "false"));
+						createVariable("Body include streams", "false"),
+						createVariable("To node", "log1"),
+						createVariable("Route ID", routeId)
+						
+						);
 			//TODO: check exact content of variables and maybe even by updating capture of arguments
 			
 			
