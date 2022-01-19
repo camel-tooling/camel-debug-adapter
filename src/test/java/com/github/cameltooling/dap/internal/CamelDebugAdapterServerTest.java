@@ -19,9 +19,7 @@ package com.github.cameltooling.dap.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
-import java.io.File;
 import java.time.Duration;
-import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -34,36 +32,15 @@ import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.Breakpoint;
 import org.eclipse.lsp4j.debug.Capabilities;
 import org.eclipse.lsp4j.debug.ContinueArguments;
-import org.eclipse.lsp4j.debug.InitializeRequestArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse;
-import org.eclipse.lsp4j.debug.Source;
-import org.eclipse.lsp4j.debug.SourceBreakpoint;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
-import org.eclipse.lsp4j.debug.TerminateArguments;
-import org.eclipse.lsp4j.debug.TerminatedEventArguments;
 import org.eclipse.lsp4j.debug.Variable;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
-class CamelDebugAdapterServerTest {
+class CamelDebugAdapterServerTest extends BaseTest {
 	
-	private CamelDebugAdapterServer server;
-	private DummyCamelDebugClient clientProxy;
-	
-	@AfterEach
-	void tearDown() {
-		if (server != null) {
-			server.terminate(new TerminateArguments());
-			server = null;
-		}
-		if (clientProxy != null) {
-			clientProxy.terminated(new TerminatedEventArguments());
-			clientProxy = null;
-		}
-	}
-
 	@Test
 	void testInitialize() throws InterruptedException, ExecutionException {
 		CompletableFuture<Capabilities> initialization = initDebugger();
@@ -85,10 +62,8 @@ class CamelDebugAdapterServerTest {
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
-			server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid())));
+			attach(server);
 			BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
-			assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
-			assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();
 			assertThat(connectionManager.getBacklogDebugger().isEnabled()).isTrue();
 			assertThat(connectionManager.getRoutesDOMDocument()).as("Routes instantiated.").isNotNull();
 		}
@@ -118,14 +93,11 @@ class CamelDebugAdapterServerTest {
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 118;
+			int lineNumberToPutBreakpoint = 93;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
-			server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid())));
-			BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
-			assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
-			assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();
+			attach(server);
 			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
 			
 			SetBreakpointsResponse response = server.setBreakpoints(setBreakpointsArguments).get();
@@ -135,7 +107,7 @@ class CamelDebugAdapterServerTest {
 			Breakpoint responseBreakpoint = responseBreakpoints[0];
 			assertThat(responseBreakpoint.getLine()).isEqualTo(lineNumberToPutBreakpoint);
 			assertThat(responseBreakpoint.isVerified()).isTrue();
-			Set<String> breakpointsSetInCamel = connectionManager.getBacklogDebugger().breakpoints();
+			Set<String> breakpointsSetInCamel = server.getConnectionManager().getBacklogDebugger().breakpoints();
 			assertThat(breakpointsSetInCamel).hasSize(1);
 
 			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testSetBreakpoint");
@@ -143,12 +115,7 @@ class CamelDebugAdapterServerTest {
 			String body = "a body for test";
 			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testSetBreakpoint", body);
 			
-			await("Wait that breakpoint hit is notified")
-				.atMost(Duration.ofSeconds(3))
-				.until(() -> 
-				{ 
-					return clientProxy.getStoppedEventArguments().size() == 1;
-				});
+			waitBreakpointNotification(1);
 			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
 			assertThat(stoppedEventArgument.getThreadId()).isZero();
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
@@ -184,52 +151,41 @@ class CamelDebugAdapterServerTest {
 			
 			server.continue_(new ContinueArguments());
 			
-			await("Wait that route has resumed and is finished")
-				.atMost(Duration.ofSeconds(3))
-				.until(() -> {
-					return asyncSendBody.isDone();
-				});
+			waitRouteIsDone(asyncSendBody);
 			
 			producerTemplate.stop();
 		}
 	}
-	
+
 	@Test
 	void testResume() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
 			String routeId = "a-route-id";
+			String startEndpointUri = "direct:testResume";
 			context.addRoutes(new RouteBuilder() {
 			
 				@Override
 				public void configure() throws Exception {
-					from("direct:testResume")
+					from(startEndpointUri)
 						.routeId(routeId)
 						.log("Log from test");  // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 207;
+			int lineNumberToPutBreakpoint = 171;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
-			server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid())));
-			BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
-			assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
-			assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();
+			attach(server);
 			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			
-			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testResume");
+			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
 			producerTemplate.start();
 			
-			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testResume", "a body");
+			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody(startEndpointUri, "a body");
 			
-			await("Wait that breakpoint hit is notified")
-				.atMost(Duration.ofSeconds(3))
-				.until(() -> 
-				{ 
-					return clientProxy.getStoppedEventArguments().size() == 1;
-				});
+			waitBreakpointNotification(1);
 			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
 			assertThat(stoppedEventArgument.getThreadId()).isZero();
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
@@ -238,53 +194,16 @@ class CamelDebugAdapterServerTest {
 			
 			server.continue_(new ContinueArguments());
 			
-			await("Wait that route has resumed and is finished")
-				.atMost(Duration.ofSeconds(3))
-				.until(() -> {
-					return asyncSendBody.isDone();
-				});
+			waitRouteIsDone(asyncSendBody);
 			
-			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody("direct:testResume", "a body 2");
+			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(startEndpointUri, "a body 2");
 			
 			assertThat(asyncSendBody2.isDone()).isFalse();
 			
-			await("Wait that second breakpoint hit is notified")
-			.atMost(Duration.ofSeconds(3))
-			.until(() -> 
-			{ 
-				return clientProxy.getStoppedEventArguments().size() == 2;
-			});
+			waitBreakpointNotification(2);
 			
 			producerTemplate.stop();
 		}
-	}
-
-	private Variable createVariable(String name, String value) {
-		Variable bodyVariable = new Variable();
-		bodyVariable.setName(name);
-		bodyVariable.setValue(value);
-		return bodyVariable;
-	}
-
-	private SetBreakpointsArguments createSetBreakpointArgument(int lineNumberToPutBreakpoint) {
-		SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
-		Source source = new Source();
-		String pathToItself = (new File("src/test/java/"+CamelDebugAdapterServerTest.class.getName()+".java")).getAbsolutePath();
-		source.setPath(pathToItself);
-		setBreakpointsArguments.setSource(source);
-		SourceBreakpoint[] breakpoints = new SourceBreakpoint[1];
-		SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-		sourceBreakpoint.setLine(lineNumberToPutBreakpoint);
-		breakpoints[0] = sourceBreakpoint;
-		setBreakpointsArguments.setBreakpoints(breakpoints);
-		return setBreakpointsArguments;
-	}
-	
-	private CompletableFuture<Capabilities> initDebugger() {
-		server = new CamelDebugAdapterServer();
-		clientProxy = new DummyCamelDebugClient(server);
-		server.connect(clientProxy);
-		return server.initialize(new InitializeRequestArguments());
 	}
 
 }
