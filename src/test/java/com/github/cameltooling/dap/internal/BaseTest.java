@@ -34,7 +34,7 @@ import org.eclipse.lsp4j.debug.TerminatedEventArguments;
 import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.AfterEach;
 
-public class BaseTest {
+public abstract class BaseTest {
 
 	protected CamelDebugAdapterServer server;
 	protected DummyCamelDebugClient clientProxy;
@@ -86,16 +86,19 @@ public class BaseTest {
 		return bodyVariable;
 	}
 
-	protected SetBreakpointsArguments createSetBreakpointArgument(int lineNumberToPutBreakpoint) {
+	protected SetBreakpointsArguments createSetBreakpointArgument(int... lineNumberToPutBreakpoints) {
 		SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
 		Source source = new Source();
 		String pathToItself = (new File("src/test/java/"+CamelDebugAdapterServerTest.class.getName()+".java")).getAbsolutePath();
 		source.setPath(pathToItself);
 		setBreakpointsArguments.setSource(source);
-		SourceBreakpoint[] breakpoints = new SourceBreakpoint[1];
-		SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
-		sourceBreakpoint.setLine(lineNumberToPutBreakpoint);
-		breakpoints[0] = sourceBreakpoint;
+		SourceBreakpoint[] breakpoints = new SourceBreakpoint[lineNumberToPutBreakpoints.length];
+		for (int i = 0; i < lineNumberToPutBreakpoints.length; i++) {
+			int lineNumberToPutBreakpoint = lineNumberToPutBreakpoints[i];
+			SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
+			sourceBreakpoint.setLine(lineNumberToPutBreakpoint);
+			breakpoints[i] = sourceBreakpoint;
+		}
 		setBreakpointsArguments.setBreakpoints(breakpoints);
 		return setBreakpointsArguments;
 	}
