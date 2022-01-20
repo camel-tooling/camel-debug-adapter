@@ -23,7 +23,7 @@ The Camel instance to debug must follow these requirements:
 - Java DSL (not tested with xml and Yaml even if it should work)
 - Single context
 - Single breakpoint
-- Add breakpoint (notably not removing)
+- Add and remove breakpoint
 - Inspect some variables when breakpoint is hit
 - Stop on hit breakpoint
 - Resume all
