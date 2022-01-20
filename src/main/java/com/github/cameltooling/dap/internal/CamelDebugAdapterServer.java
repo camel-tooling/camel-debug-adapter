@@ -16,6 +16,7 @@
  */
 package com.github.cameltooling.dap.internal;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -78,6 +79,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Map<Integer, List<ExchangeProperty>> variableReferenceToExchangeProperties = new HashMap<>();
 	private Map<String, Source> breakpointIdToSource = new HashMap<>();
 	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
+	private Map<String, Set<String>> sourceToBreakpointIds = new HashMap<>();
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -107,6 +109,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Source source = setBreakpointsArguments.getSource();
 		SourceBreakpoint[] sourceBreakpoints = setBreakpointsArguments.getBreakpoints();
 		Breakpoint[] breakpoints = new Breakpoint[sourceBreakpoints.length];
+		Set<String> breakpointIds = new HashSet<>();
 		for (int i = 0; i< sourceBreakpoints.length; i++) {
 			SourceBreakpoint sourceBreakpoint = sourceBreakpoints[i];
 			Breakpoint breakpoint = new Breakpoint();
@@ -128,6 +131,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 					String breakpointId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
 					breakpointIdToSource.put(breakpointId, source);
 					breakpointIdToLine.put(breakpointId, line);
+					breakpointIds.add(breakpointId);
 					connectionManager.getBacklogDebugger().addBreakpoint(breakpointId);
 					breakpoint.setVerified(true);
 				}
@@ -135,8 +139,19 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				LOGGER.warn("Cannot find related id", e);
 			}
 		}
+		removeOldBreakpoints(source, breakpointIds);
+		sourceToBreakpointIds.put(source.getPath(), breakpointIds);
 		response.setBreakpoints(breakpoints);
 		return CompletableFuture.completedFuture(response);
+	}
+
+	private void removeOldBreakpoints(Source source, Set<String> breakpointIds) {
+		Set<String> previouslySetBreakpointIds = sourceToBreakpointIds.getOrDefault(source.getPath(), Collections.emptySet());
+		for (String previouslySetBreakpointId : previouslySetBreakpointIds) {
+			if(!breakpointIds.contains(previouslySetBreakpointId)) {
+				connectionManager.getBacklogDebugger().removeBreakpoint(previouslySetBreakpointId);
+			}
+		}
 	}
 	
 	@Override

@@ -89,7 +89,7 @@ public abstract class BaseTest {
 	protected SetBreakpointsArguments createSetBreakpointArgument(int... lineNumberToPutBreakpoints) {
 		SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
 		Source source = new Source();
-		String pathToItself = (new File("src/test/java/"+CamelDebugAdapterServerTest.class.getName()+".java")).getAbsolutePath();
+		String pathToItself = (new File("src/test/java/"+getClass().getName()+".java")).getAbsolutePath();
 		source.setPath(pathToItself);
 		setBreakpointsArguments.setSource(source);
 		SourceBreakpoint[] breakpoints = new SourceBreakpoint[lineNumberToPutBreakpoints.length];
