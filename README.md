@@ -12,7 +12,7 @@ The Debug Adapter allows to set breakpoints and debug Camel textual DSLs.
 
 The Camel instance to debug must follow these requirements:
 
-- 3.15+
+- Camel 3.15+
 - Have `camel-debug` on the classpath
 - Have JMX enabled
 
@@ -27,7 +27,8 @@ The Camel instance to debug must follow these requirements:
 - Inspect some variables when breakpoint is hit
 - Stop on hit breakpoint
 - Resume all
-- tested manually only with [Eclipse LSP4E](https://github.com/eclipse/lsp4e) so far
+- Tested manually with [Eclipse LSP4E](https://github.com/eclipse/lsp4e), see [how-to](https://github.com/camel-tooling/camel-dap-client-eclipse#how-to-use-the-debug-adapter-for-apache-camel)
+- Tested manually with locally built [VS Code Debug Adapter for Apache Camel](https://github.com/camel-tooling/camel-dap-client-vscode), see [how-to](https://github.com/camel-tooling/camel-dap-client-vscode#how-to-use-it)
 
 ## How to use it
 
