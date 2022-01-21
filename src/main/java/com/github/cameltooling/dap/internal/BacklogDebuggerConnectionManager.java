@@ -19,8 +19,10 @@ package com.github.cameltooling.dap.internal;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.management.JMX;
@@ -36,11 +38,17 @@ import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.eclipse.lsp4j.debug.ThreadEventArguments;
+import org.eclipse.lsp4j.debug.ThreadEventArgumentsReason;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 
+import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
+import com.github.cameltooling.dap.internal.model.CamelThread;
+import com.github.cameltooling.dap.internal.types.EventMessage;
+import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 import com.sun.tools.attach.VirtualMachine;
 
 public class BacklogDebuggerConnectionManager {
@@ -58,6 +66,9 @@ public class BacklogDebuggerConnectionManager {
 	private Document routesDOMDocument;
 	private IDebugProtocolClient client;
 	private Set<String> notifiedSuspendedBreakpointIds = new HashSet<>();
+	private Set<CamelThread> camelThreads = new HashSet<>();
+	int threadIdCounter = 1;
+	private Map<String, CamelBreakpoint> camelBreakpointsWithSources = new HashMap<>();
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -108,11 +119,24 @@ public class BacklogDebuggerConnectionManager {
 			Set<String> suspendedBreakpointNodeIds = backlogDebugger.suspendedBreakpointNodeIds();
 			// TODO: ensure list is cleaned at a time
 			for (String nodeId : suspendedBreakpointNodeIds) {
-				if (!getNotifiedSuspendedBreakpointIds().contains(nodeId)) {
+				if (!notifiedSuspendedBreakpointIds.contains(nodeId)) {
 					StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
 					stoppedEventArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT);
-					stoppedEventArgs.setThreadId(0);
-					getNotifiedSuspendedBreakpointIds().add(nodeId);
+					stoppedEventArgs.setThreadId(threadIdCounter);
+					String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId, true);
+					EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
+					Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
+					if(thread.isEmpty()) {
+						camelThreads.add(new CamelThread(threadIdCounter, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
+						ThreadEventArguments threadEventArguments = new ThreadEventArguments();
+						threadEventArguments.setReason(ThreadEventArgumentsReason.STARTED);
+						threadEventArguments.setThreadId(threadIdCounter);
+						client.thread(threadEventArguments);
+						threadIdCounter++;
+					} else {
+						thread.get().update(nodeId, eventMessage);
+					}
+					notifiedSuspendedBreakpointIds.add(nodeId);
 					client.stopped(stoppedEventArgs);
 				}
 			}
@@ -179,8 +203,28 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	public void resumeAll() {
+		for (CamelThread camelThread : camelThreads) {
+			ThreadEventArguments threadEventArguments = new ThreadEventArguments();
+			threadEventArguments.setReason(ThreadEventArgumentsReason.EXITED);
+			threadEventArguments.setThreadId(camelThread.getId());
+			client.thread(threadEventArguments);
+		}
 		backlogDebugger.resumeAll();
+		camelThreads.clear();
 		notifiedSuspendedBreakpointIds.clear();
+	}
+
+	public Set<CamelThread> getCamelThreads() {
+		return camelThreads;
+	}
+
+	public void updateBreakpointsWithSources(CamelBreakpoint breakpoint) {
+		this.camelBreakpointsWithSources.put(breakpoint.getNodeId(), breakpoint);
+	}
+
+	public void removeBreakpoint(String previouslySetBreakpointId) {
+		backlogDebugger.removeBreakpoint(previouslySetBreakpointId);
+		this.camelBreakpointsWithSources.remove(previouslySetBreakpointId);
 	}
 
 }

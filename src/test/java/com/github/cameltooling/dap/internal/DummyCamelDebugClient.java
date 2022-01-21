@@ -29,6 +29,7 @@ import org.eclipse.lsp4j.debug.StackTraceArguments;
 import org.eclipse.lsp4j.debug.StackTraceResponse;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.Thread;
+import org.eclipse.lsp4j.debug.ThreadEventArguments;
 import org.eclipse.lsp4j.debug.ThreadsResponse;
 import org.eclipse.lsp4j.debug.Variable;
 import org.eclipse.lsp4j.debug.VariablesArguments;
@@ -40,6 +41,7 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 	private boolean hasReceivedInitializedEvent;
 	private List<StoppedEventArguments> stoppedEventArguments = new ArrayList<>();
 	private List<StackAndVarOnStopEvent> wholeStackAndVars = new ArrayList<>();
+	private List<ThreadEventArguments> threadEventArgumentss = new ArrayList<>();
 	private CamelDebugAdapterServer server;
 
 	public DummyCamelDebugClient(CamelDebugAdapterServer server) {
@@ -106,6 +108,11 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 		
 		
 	}
+	
+	@Override
+	public void thread(ThreadEventArguments args) {
+		threadEventArgumentss.add(args);
+	}
 
 	public List<StoppedEventArguments> getStoppedEventArguments() {
 		return stoppedEventArguments;
@@ -113,6 +120,10 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 
 	public List<StackAndVarOnStopEvent> getAllStacksAndVars() {
 		return wholeStackAndVars;
+	}
+
+	public List<ThreadEventArguments> getThreadEventArgumentss() {
+		return threadEventArgumentss;
 	}
 
 }

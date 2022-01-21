@@ -71,7 +71,7 @@ class RemoveBreakpointTest extends BaseTest {
 		
 		waitBreakpointNotification(1);
 		StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
-		assertThat(stoppedEventArgument.getThreadId()).isZero();
+		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 		
 		assertThat(asyncSendBody.isDone()).isFalse();

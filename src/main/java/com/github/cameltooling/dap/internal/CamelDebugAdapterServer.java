@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -46,7 +47,6 @@ import org.eclipse.lsp4j.debug.StackFrame;
 import org.eclipse.lsp4j.debug.StackTraceArguments;
 import org.eclipse.lsp4j.debug.StackTraceResponse;
 import org.eclipse.lsp4j.debug.TerminateArguments;
-import org.eclipse.lsp4j.debug.Thread;
 import org.eclipse.lsp4j.debug.ThreadsResponse;
 import org.eclipse.lsp4j.debug.Variable;
 import org.eclipse.lsp4j.debug.VariablesArguments;
@@ -58,6 +58,8 @@ import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
+import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
+import com.github.cameltooling.dap.internal.model.CamelThread;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.ExchangeProperty;
 import com.github.cameltooling.dap.internal.types.Header;
@@ -77,8 +79,6 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Map<Integer, String> exchangeVariableReferenceToBreakpointId = new HashMap<>();
 	private Map<Integer, List<Header>> headersVariableReferenceToHeaders = new HashMap<>();
 	private Map<Integer, List<ExchangeProperty>> variableReferenceToExchangeProperties = new HashMap<>();
-	private Map<String, Source> breakpointIdToSource = new HashMap<>();
-	private Map<String, Integer> breakpointIdToLine = new HashMap<>();
 	private Map<String, Set<String>> sourceToBreakpointIds = new HashMap<>();
 
 	public void connect(IDebugProtocolClient clientProxy) {
@@ -112,9 +112,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Set<String> breakpointIds = new HashSet<>();
 		for (int i = 0; i< sourceBreakpoints.length; i++) {
 			SourceBreakpoint sourceBreakpoint = sourceBreakpoints[i];
-			Breakpoint breakpoint = new Breakpoint();
-			breakpoint.setSource(source);
 			int line = sourceBreakpoint.getLine();
+			CamelBreakpoint breakpoint = new CamelBreakpoint(source, line);
+			breakpoint.setSource(source);
 			breakpoint.setLine(line);
 			breakpoint.setMessage("the breakpoint "+ i);
 			breakpoints[i] = breakpoint;
@@ -128,11 +128,11 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				XPath xPath = XPathFactory.newInstance().newXPath();
 				Node breakpointTagFromContext = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
 				if (breakpointTagFromContext != null) {
-					String breakpointId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
-					breakpointIdToSource.put(breakpointId, source);
-					breakpointIdToLine.put(breakpointId, line);
-					breakpointIds.add(breakpointId);
-					connectionManager.getBacklogDebugger().addBreakpoint(breakpointId);
+					String nodeId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
+					breakpoint.setNodeId(nodeId);
+					connectionManager.updateBreakpointsWithSources(breakpoint);
+					breakpointIds.add(nodeId);
+					connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
 					breakpoint.setVerified(true);
 				}
 			} catch (Exception e) {
@@ -149,7 +149,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Set<String> previouslySetBreakpointIds = sourceToBreakpointIds.getOrDefault(source.getPath(), Collections.emptySet());
 		for (String previouslySetBreakpointId : previouslySetBreakpointIds) {
 			if(!breakpointIds.contains(previouslySetBreakpointId)) {
-				connectionManager.getBacklogDebugger().removeBreakpoint(previouslySetBreakpointId);
+				connectionManager.removeBreakpoint(previouslySetBreakpointId);
 			}
 		}
 	}
@@ -157,12 +157,8 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<ThreadsResponse> threads() {
 		ThreadsResponse value = new ThreadsResponse();
-		Thread[] threads = new Thread[1];
-		Thread thread = new Thread();
-		thread.setId(0);
-		thread.setName("Camel context");
-		threads[0] = thread;
-		value.setThreads(threads);
+		Set<CamelThread> threads = connectionManager.getCamelThreads();
+		value.setThreads(threads.toArray(new CamelThread[threads.size()]));
 		return CompletableFuture.completedFuture(value);
 	}
 	
@@ -170,19 +166,11 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
 		StackTraceResponse response = new StackTraceResponse();
 		Set<StackFrame> stackFrames = new HashSet<>();
-		
-		Set<String> breakpointIds = connectionManager.getNotifiedSuspendedBreakpointIds();
-		for (String breakpointId : breakpointIds) {
-			StackFrame stackFrame = new StackFrame();
-			// TODO: compute a better name
-			stackFrame.setName(breakpointId);
-			// TODO: provide a better hashcode for stackframe containing the camelcontext too
-			int frameId = getPositiveIntFromHashCode(breakpointId.hashCode());
-			stackFrame.setId(frameId);
-			stackFrame.setSource(breakpointIdToSource.get(breakpointId));
-			stackFrame.setLine(breakpointIdToLine.get(breakpointId));
-			frameIdToBreakpointId.put(frameId, breakpointId);
-			stackFrames.add(stackFrame);
+		Set<CamelThread> camelThreads = connectionManager.getCamelThreads();
+		Optional<CamelThread> camelThreadOptional = camelThreads.stream().filter(camelThread -> camelThread.getId() == args.getThreadId()).findAny();
+		if (camelThreadOptional.isPresent()) {
+			CamelThread camelThread = camelThreadOptional.get();
+			stackFrames.add(camelThread.getStackFrame());
 		}
 		response.setStackFrames(stackFrames.toArray(new StackFrame[stackFrames.size()]) );
 		return CompletableFuture.completedFuture(response);
@@ -191,15 +179,19 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<ScopesResponse> scopes(ScopesArguments args) {
 		ScopesResponse response = new ScopesResponse();
-		String breakpointId = frameIdToBreakpointId.get(args.getFrameId());
+		Optional<CamelThread> camelThreadOptional = connectionManager.getCamelThreads().stream()
+				.filter(camelThread -> args.getFrameId() == camelThread.getStackFrame().getId())
+				.findAny();
 		Set<Scope> scopes = new HashSet<>();
-		
-		scopes.add(createScope("Debugger", breakpointId, debuggerVariableReferenceToBreakpointId));
-		scopes.add(createScope("Endpoint", breakpointId, endpointVariableReferenceToBreakpointId));
-		scopes.add(createScope("Processor", breakpointId, processorVariableReferenceToBreakpointId));
-		scopes.add(createScope("Exchange", breakpointId, exchangeVariableReferenceToBreakpointId));
-		scopes.add(createScope("Message", breakpointId, messagevariableReferenceToBreakpointId));
-		
+		if (camelThreadOptional.isPresent()) {
+			String breakpointId = camelThreadOptional.get().getBreakPointId();
+			
+			scopes.add(createScope("Debugger", breakpointId, debuggerVariableReferenceToBreakpointId));
+			scopes.add(createScope("Endpoint", breakpointId, endpointVariableReferenceToBreakpointId));
+			scopes.add(createScope("Processor", breakpointId, processorVariableReferenceToBreakpointId));
+			scopes.add(createScope("Exchange", breakpointId, exchangeVariableReferenceToBreakpointId));
+			scopes.add(createScope("Message", breakpointId, messagevariableReferenceToBreakpointId));
+		}
 		response.setScopes(scopes.toArray(new Scope[scopes.size()]));
 		return CompletableFuture.completedFuture(response);
 	}
@@ -207,14 +199,10 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private Scope createScope(String name, String breakpointId, Map<Integer, String> variableReferences) {
 		Scope scope = new Scope();
 		scope.setName(name);
-		int variableRefId = getPositiveIntFromHashCode(("@"+ name + "@" + breakpointId).hashCode());
+		int variableRefId = IdUtils.getPositiveIntFromHashCode(("@"+ name + "@" + breakpointId).hashCode());
 		scope.setVariablesReference(variableRefId);
 		variableReferences.put(variableRefId, breakpointId);
 		return scope;
-	}
-
-	private int getPositiveIntFromHashCode(int hashCode) {
-		return hashCode & 0x7fffffff;
 	}
 	
 	@Override
@@ -240,7 +228,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
 				Variable headersVariable = new Variable();
 				headersVariable.setName("Headers");
-				int headerVarRefId = getPositiveIntFromHashCode((variablesReference+"@headers@").hashCode());
+				int headerVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@headers@").hashCode());
 				headersVariableReferenceToHeaders.put(headerVarRefId, eventMessage.getMessage().getHeaders());
 				headersVariable.setVariablesReference(headerVarRefId);
 				variables.add(headersVariable);
@@ -282,7 +270,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
 				Variable exchangeVariable = new Variable();
 				exchangeVariable.setName("Properties");
-				int exchangeVarRefId = getPositiveIntFromHashCode((variablesReference+"@exchange@").hashCode());
+				int exchangeVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@exchange@").hashCode());
 				variableReferenceToExchangeProperties.put(exchangeVarRefId, eventMessage.getExchangeProperties());
 				exchangeVariable.setVariablesReference(exchangeVarRefId);
 				variables.add(exchangeVariable);
@@ -308,7 +296,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	}
 	
 	@Override
-	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {	
+	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {
 		debuggerVariableReferenceToBreakpointId.clear();
 		endpointVariableReferenceToBreakpointId.clear();
 		exchangeVariableReferenceToBreakpointId.clear();
