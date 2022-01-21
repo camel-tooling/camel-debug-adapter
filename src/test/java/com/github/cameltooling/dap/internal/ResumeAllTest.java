@@ -17,7 +17,9 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.camel.CamelContext;
@@ -28,6 +30,7 @@ import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.Test;
 
 class ResumeAllTest extends BaseTest {
@@ -46,7 +49,7 @@ class ResumeAllTest extends BaseTest {
 						.log("Log from test");  // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 46;
+			int lineNumberToPutBreakpoint = 49;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -61,9 +64,13 @@ class ResumeAllTest extends BaseTest {
 			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody(startEndpointUri, "a body");
 			
 			waitBreakpointNotification(1);
-			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
-			assertThat(stoppedEventArgument.getThreadId()).isZero();
+			int index = 0;
+			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(index);
+			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
+			waitForBodyVariable(0);
+			Variable bodyVariable1 = findBodyVariableAtIndex(index).get();
+			assertThat(bodyVariable1.getValue()).isEqualTo("a body");
 			
 			assertThat(asyncSendBody.isDone()).isFalse();
 			
@@ -77,8 +84,23 @@ class ResumeAllTest extends BaseTest {
 			
 			waitBreakpointNotification(2);
 			
+			waitForBodyVariable(1);
+			Variable bodyVariable2 = findBodyVariableAtIndex(1).get();
+			assertThat(bodyVariable2.getValue()).isEqualTo("a body 2");
+			
 			producerTemplate.stop();
 		}
+	}
+
+	private void waitForBodyVariable(int index) {
+		await("Wait for body variable to be filled up")
+			.until(() -> {
+				return findBodyVariableAtIndex(index).isPresent();
+			});
+	}
+
+	private Optional<Variable> findBodyVariableAtIndex(int index) {
+		return clientProxy.getAllStacksAndVars().get(index).getVariables().stream().filter(variable -> "body".equalsIgnoreCase(variable.getName())).findAny();
 	}
 	
 	@Test
@@ -96,7 +118,7 @@ class ResumeAllTest extends BaseTest {
 						.log("second log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 95;
+			int firstLineNumberToPutBreakpoint = 117;
 			int secondLineNumberToPutBreakpoint = firstLineNumberToPutBreakpoint + 1;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
@@ -113,14 +135,14 @@ class ResumeAllTest extends BaseTest {
 			
 			waitBreakpointNotification(1);
 			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
-			assertThat(stoppedEventArgument.getThreadId()).isZero();
+			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
 			server.continue_(new ContinueArguments());
 			
 			waitBreakpointNotification(2);
 			StoppedEventArguments secondStoppedEventArgument = clientProxy.getStoppedEventArguments().get(1);
-			assertThat(secondStoppedEventArgument.getThreadId()).isZero();
+			assertThat(secondStoppedEventArgument.getThreadId()).isEqualTo(2);
 			assertThat(secondStoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
 			server.continue_(new ContinueArguments());
