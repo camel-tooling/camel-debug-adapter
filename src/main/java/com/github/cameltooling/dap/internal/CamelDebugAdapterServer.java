@@ -92,12 +92,6 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	}
 	
 	@Override
-	public CompletableFuture<Void> launch(Map<String, Object> args) {
-		// TODO: built-in Debug Configuration launch in Eclipse only allows to launch and not attach. So here is a trick.
-		return attach(args);
-	}
-	
-	@Override
 	public CompletableFuture<Void> attach(Map<String, Object> args) {
 		connectionManager.attach(args, client);
 		return CompletableFuture.completedFuture(null);
