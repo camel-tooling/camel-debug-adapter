@@ -25,6 +25,13 @@ To test with the Client integration of Eclipse IDE:
   - In `command` field, set `java`
   - In `Arguments` field, set `-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=3000 -jar <pathTo>/camel-dap-server-xxx.jar`
   - Select `Monitor Debug Adapter launch process`
-  - In `Launch Parameters (Json)` field, set { "attach_pid": "<thePidOfTheCamelApplication>"}
+  - In `Launch Parameters (Json)` field, set
+  
+  ```json
+  {
+   "request": "attach",
+   "attach_pid": "<thePidOfTheCamelApplication>"
+  }
+  ```
   - Click `Debug`
 - You can now set breakpoints in textual Camel route definition and Camel Debug Adapter project
