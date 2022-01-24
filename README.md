@@ -16,6 +16,8 @@ The Camel instance to debug must follow these requirements:
 - Have `camel-debug` on the classpath
 - Have JMX enabled
 
+The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.sun.tools.attach.VirtualMachine` (available in most JVMs such as Hotspot and OpenJDK).
+
 ## Supported scope
 
 - Local only
