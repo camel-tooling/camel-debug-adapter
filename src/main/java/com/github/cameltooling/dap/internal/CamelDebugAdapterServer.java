@@ -252,12 +252,12 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		
 		breakpointId = debuggerVariableReferenceToBreakpointId.get(variablesReference);
 		if(breakpointId != null) {
-			variables.add(createVariable("Logging level", connectionManager.getBacklogDebugger().getLoggingLevel()));
-			variables.add(createVariable("Max chars for body", Integer.toString(connectionManager.getBacklogDebugger().getBodyMaxChars())));
-			variables.add(createVariable("Debug counter", Long.toString(connectionManager.getBacklogDebugger().getDebugCounter())));
-			variables.add(createVariable("Fallback timeout", Long.toString(connectionManager.getBacklogDebugger().getFallbackTimeout())));
-			variables.add(createVariable("Body include files", Boolean.toString(connectionManager.getBacklogDebugger().isBodyIncludeFiles())));
-			variables.add(createVariable("Body include streams", Boolean.toString(connectionManager.getBacklogDebugger().isBodyIncludeStreams())));
+			variables.add(createVariable("Logging level", debugger.getLoggingLevel()));
+			variables.add(createVariable("Max chars for body", Integer.toString(debugger.getBodyMaxChars())));
+			variables.add(createVariable("Debug counter", Long.toString(debugger.getDebugCounter())));
+			variables.add(createVariable("Fallback timeout", Long.toString(debugger.getFallbackTimeout())));
+			variables.add(createVariable("Body include files", Boolean.toString(debugger.isBodyIncludeFiles())));
+			variables.add(createVariable("Body include streams", Boolean.toString(debugger.isBodyIncludeStreams())));
 		}
 		
 		breakpointId = exchangeVariableReferenceToBreakpointId.get(variablesReference);
