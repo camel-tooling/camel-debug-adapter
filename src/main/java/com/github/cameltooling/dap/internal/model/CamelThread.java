@@ -46,7 +46,7 @@ public class CamelThread extends Thread {
 		} else {
 			// TODO: the breakpoint was surely not set through UI, must search the source
 		}
-		this.stackFrame = new CamelStackFrame(frameId, breakpointId, eventMessage, source, line);
+		this.stackFrame = new CamelStackFrame(frameId, breakpointId, source, line);
 	}
 
 	@Override

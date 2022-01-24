@@ -19,14 +19,9 @@ package com.github.cameltooling.dap.internal.model;
 import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.StackFrame;
 
-import com.github.cameltooling.dap.internal.types.EventMessage;
-
 public class CamelStackFrame extends StackFrame {
 
-	private EventMessage eventMessage;
-
-	public CamelStackFrame(int frameId, String breakpointId, EventMessage eventMessage, Source source, Integer line) {
-		this.eventMessage = eventMessage;
+	public CamelStackFrame(int frameId, String breakpointId, Source source, Integer line) {
 		setId(frameId);
 		setName(breakpointId);
 		setSource(source);
