@@ -16,6 +16,8 @@
  */
 package com.github.cameltooling.dap.internal.model;
 
+import java.util.Objects;
+
 import org.eclipse.lsp4j.debug.Breakpoint;
 import org.eclipse.lsp4j.debug.Source;
 
@@ -34,6 +36,20 @@ public class CamelBreakpoint extends Breakpoint {
 
 	public void setNodeId(String nodeId) {
 		this.nodeId = nodeId;
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(!super.equals(obj)) {
+			return false;
+		}
+		CamelBreakpoint that = (CamelBreakpoint) obj;
+		return Objects.equals(this.nodeId, that.nodeId);
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(super.hashCode(), nodeId);
 	}
 
 }
