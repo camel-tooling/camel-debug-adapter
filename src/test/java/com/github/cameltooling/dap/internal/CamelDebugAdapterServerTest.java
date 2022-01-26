@@ -18,7 +18,6 @@ package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import org.apache.camel.CamelContext;
@@ -31,8 +30,8 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	
 	@Test
 	void testInitialize() throws InterruptedException, ExecutionException {
-		CompletableFuture<Capabilities> initialization = initDebugger();
-		assertThat(initialization.get()).isNotNull();
+		Capabilities capabilities = initDebugger();
+		assertThat(capabilities).isNotNull();
 		assertThat(clientProxy.hasReceivedInitializedEvent()).isTrue();
 	}
 	

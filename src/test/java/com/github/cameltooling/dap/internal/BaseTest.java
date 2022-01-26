@@ -23,6 +23,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.eclipse.lsp4j.debug.Capabilities;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
@@ -103,11 +104,11 @@ public abstract class BaseTest {
 		return setBreakpointsArguments;
 	}
 
-	protected CompletableFuture<Capabilities> initDebugger() {
+	protected Capabilities initDebugger() throws InterruptedException, ExecutionException {
 		server = new CamelDebugAdapterServer();
 		clientProxy = new DummyCamelDebugClient(server);
 		server.connect(clientProxy);
-		return server.initialize(new InitializeRequestArguments());
+		return server.initialize(new InitializeRequestArguments()).get();
 	}
 
 }
