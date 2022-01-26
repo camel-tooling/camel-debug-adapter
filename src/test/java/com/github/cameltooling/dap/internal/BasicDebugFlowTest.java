@@ -118,7 +118,11 @@ class BasicDebugFlowTest extends BaseTest {
 						createVariable("header1", "value of header 1"),
 						createVariable("header2", "value of header 2"),
 						createVariable("property1", "value of property 1"),
-						createVariable("property2", "value of property 2"));		
+						createVariable("property2", "value of property 2"));
+			
+			assertThat(variables.stream().map(var -> var.getValue()))
+				.as("All variables must have a non-null values due to limitation in VS Code implementation, see https://github.com/microsoft/vscode/issues/141544")
+				.doesNotContain(new String[] {null});
 			
 			server.continue_(new ContinueArguments());
 			

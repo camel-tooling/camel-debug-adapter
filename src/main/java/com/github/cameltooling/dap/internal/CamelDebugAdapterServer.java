@@ -222,6 +222,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
 				Variable headersVariable = new Variable();
 				headersVariable.setName("Headers");
+				headersVariable.setValue("");
 				int headerVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@headers@").hashCode());
 				headersVariableReferenceToHeaders.put(headerVarRefId, eventMessage.getMessage().getHeaders());
 				headersVariable.setVariablesReference(headerVarRefId);
@@ -264,6 +265,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
 				Variable exchangeVariable = new Variable();
 				exchangeVariable.setName("Properties");
+				exchangeVariable.setValue("");
 				int exchangeVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@exchange@").hashCode());
 				variableReferenceToExchangeProperties.put(exchangeVarRefId, eventMessage.getExchangeProperties());
 				exchangeVariable.setVariablesReference(exchangeVarRefId);
