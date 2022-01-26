@@ -92,6 +92,7 @@ public class BacklogDebuggerConnectionManager {
 			if (pid != null) {
 				jmxAddress = getLocalJMXUrl((String) pid);
 			}
+			LOGGER.error("Will use JMX adress: {}", jmxAddress);
 			JMXServiceURL jmxUrl = new JMXServiceURL(jmxAddress);
 			jmxConnector = JMXConnectorFactory.connect(jmxUrl);
 			mbeanConnection = jmxConnector.getMBeanServerConnection();
