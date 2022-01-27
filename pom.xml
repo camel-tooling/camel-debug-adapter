@@ -6,7 +6,7 @@
 	<name>Camel Debug Adapter</name>
 	<description>Debug Adapter for Apache Camel based on Debug Adapter Protocol</description>
 
-	<url>https://github.com/camel-tooling/camel-language-server</url>
+	<url>https://github.com/camel-tooling/camel-debug-adapter</url>
 
 	<licenses>
 		<license>
