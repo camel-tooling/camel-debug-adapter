@@ -21,6 +21,21 @@
 		<url>https://github.com/camel-tooling/camel-debug-adapter</url>
 	</scm>
 
+	<developers>
+		<developer>
+			<name>Aurélien Pupier</name>
+			<email>apupier@redhat.com</email>
+			<organization>Red Hat</organization>
+			<organizationUrl>https://www.redhat.com</organizationUrl>
+		</developer>
+		<developer>
+			<name>Lars Heinemann</name>
+			<email>lhein@redhat.com</email>
+			<organization>Red Hat</organization>
+			<organizationUrl>https://www.redhat.com</organizationUrl>
+		</developer>
+	</developers>
+
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<maven.compiler.source>11</maven.compiler.source>
