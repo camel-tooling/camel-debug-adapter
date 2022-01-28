@@ -2,7 +2,7 @@ name: Main branch - Sonar analysis and Signing
 
 on:
   push:
-    branches: [ main ]
+    branches: [ FUSETOOLS2-1458-configureSigning ]
 
 jobs:
   build:
@@ -21,19 +21,8 @@ jobs:
         cache: 'maven'
         gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
         gpg-passphrase: MAVEN_GPG_PASSPHRASE
-    - name: Cache SonarCloud packages
-      uses: actions/cache@v1
-      with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar
-        restore-keys: ${{ runner.os }}-sonar
     - name: Build and sign with Maven
       run: mvn -P sign -B verify
       env:
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
-    - name: Sonar analysis
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=camel-tooling_camel-debug-adapter
         
