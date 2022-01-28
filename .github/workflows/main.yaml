@@ -2,7 +2,7 @@ name: Main branch - Sonar analysis and Signing
 
 on:
   push:
-    branches: [ main ]
+    branches: [ FUSETOOLS2-1464-Publish ]
 
 jobs:
   build:
@@ -24,21 +24,10 @@ jobs:
         server-id: ossrh # Value of the distributionManagement/repository/id field of the pom.xml
         server-username: MAVEN_USERNAME # env variable for username in deploy
         server-password: MAVEN_CENTRAL_TOKEN # env variable for token in deploy
-    - name: Cache SonarCloud packages
-      uses: actions/cache@v1
-      with:
-        path: ~/.sonar/cache
-        key: ${{ runner.os }}-sonar
-        restore-keys: ${{ runner.os }}-sonar
     - name: Build, sign and deploy
       run: mvn -P sign -B deploy
       env:
         MAVEN_USERNAME: apupier
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
         MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
-    - name: Sonar analysis
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=camel-tooling_camel-debug-adapter
         
