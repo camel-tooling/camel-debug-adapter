@@ -36,6 +36,8 @@ class RemoveBreakpointTest extends BaseTest {
 	void testRemoveOneBreakpoint() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
 			String fromUri = "direct:testRemoveBreakpoint";
+			context.start();
+			assertThat(context.isStarted()).isTrue();
 			context.addRoutes(new RouteBuilder() {
 			
 				@Override
@@ -44,9 +46,7 @@ class RemoveBreakpointTest extends BaseTest {
 						.log("Log from test"); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 44;
-			context.start();
-			assertThat(context.isStarted()).isTrue();
+			int lineNumberToPutBreakpoint = 46;
 			initDebugger();
 			attach(server);
 			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);

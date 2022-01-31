@@ -49,6 +49,8 @@ class BasicDebugFlowTest extends BaseTest {
 	@Test
 	void testBasicFlow() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
+			context.start();
+			assertThat(context.isStarted()).isTrue();
 			String routeId = "a-route-id";
 			String logEndpointId = "testBasicFlow-log-id";
 			context.addRoutes(new RouteBuilder() {
@@ -64,9 +66,7 @@ class BasicDebugFlowTest extends BaseTest {
 						.log("Log from test").id(logEndpointId); // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 64;
-			context.start();
-			assertThat(context.isStarted()).isTrue();
+			int lineNumberToPutBreakpoint = 66;
 			initDebugger();
 			attach(server);
 			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);

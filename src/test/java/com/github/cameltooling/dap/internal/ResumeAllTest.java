@@ -38,6 +38,8 @@ class ResumeAllTest extends BaseTest {
 	@Test
 	void testResumeAndSecondBreakpointHitOfAnotherRouteInstance() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
+			context.start();
+			assertThat(context.isStarted()).isTrue();
 			String routeId = "a-route-id";
 			String startEndpointUri = "direct:testResume";
 			context.addRoutes(new RouteBuilder() {
@@ -49,9 +51,7 @@ class ResumeAllTest extends BaseTest {
 						.log("Log from test");  // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 49;
-			context.start();
-			assertThat(context.isStarted()).isTrue();
+			int lineNumberToPutBreakpoint = 51;
 			initDebugger();
 			attach(server);
 			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
@@ -108,6 +108,8 @@ class ResumeAllTest extends BaseTest {
 		try (CamelContext context = new DefaultCamelContext()) {
 			String routeId = "a-route-id";
 			String startEndpointUri = "direct:testResume";
+			context.start();
+			assertThat(context.isStarted()).isTrue();
 			context.addRoutes(new RouteBuilder() {
 			
 				@Override
@@ -118,10 +120,8 @@ class ResumeAllTest extends BaseTest {
 						.log("second log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 117;
+			int firstLineNumberToPutBreakpoint = 119;
 			int secondLineNumberToPutBreakpoint = firstLineNumberToPutBreakpoint + 1;
-			context.start();
-			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
 			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(firstLineNumberToPutBreakpoint, secondLineNumberToPutBreakpoint);

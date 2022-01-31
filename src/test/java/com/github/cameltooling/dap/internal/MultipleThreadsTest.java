@@ -38,6 +38,8 @@ class MultipleThreadsTest extends BaseTest {
 		try (CamelContext context = new DefaultCamelContext()) {
 			String startEndpointUri1 = "direct:testThreads1";
 			String startEndpointUri2 = "direct:testThreads2";
+			context.start();
+			assertThat(context.isStarted()).isTrue();
 			context.addRoutes(new RouteBuilder() {
 			
 				@Override
@@ -49,11 +51,9 @@ class MultipleThreadsTest extends BaseTest {
 						.log("Log from test 2");  // line number to use from here
 				}
 			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(46, 49);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(48, 51);
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			

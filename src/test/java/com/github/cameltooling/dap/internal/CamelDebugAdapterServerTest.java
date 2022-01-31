@@ -38,6 +38,8 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	@Test
 	void testAttachToCamelWithPid() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
+			context.start();
+			assertThat(context.isStarted()).isTrue();
 			context.addRoutes(new RouteBuilder() {
 			
 				@Override
@@ -46,8 +48,6 @@ class CamelDebugAdapterServerTest extends BaseTest {
 						.log("Log from test");
 				}
 			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
 			BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
