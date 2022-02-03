@@ -20,37 +20,21 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
-import org.eclipse.lsp4j.debug.Source;
-import org.eclipse.lsp4j.debug.StackFrame;
 import org.eclipse.lsp4j.debug.Variable;
 
-public class CamelStackFrame extends StackFrame {
+import com.github.cameltooling.dap.internal.IdUtils;
 
-	private Set<CamelScope> scopes = new HashSet<>();
-
-	public CamelStackFrame(int frameId, String breakpointId, Source source, Integer line) {
-		setId(frameId);
-		setName(breakpointId);
-		setSource(source);
-		setLine(line);
+public class CamelEndpointScope extends CamelScope {
+	
+	public CamelEndpointScope(CamelStackFrame stackframe) {
+		super("Endpoint", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Endpoint@" + stackframe.getName()).hashCode()));
 	}
 	
-	public Set<CamelScope> createScopes() {
-		scopes.clear();
-		scopes.add(new CamelDebuggerScope(this));
-		scopes.add(new CamelEndpointScope(this));
-		scopes.add(new CamelProcessorScope(this));
-		scopes.add(new CamelExchangeScope(this));
-		scopes.add(new CamelMessageScope(this));
-		return scopes;
-	}
-
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
-		for (CamelScope camelScope : scopes) {
-			variables.addAll(camelScope.createVariables(variablesReference, debugger));
+		if (variablesReference == getVariablesReference()) {
+			variables.add(createVariable("Name", getName()));
 		}
 		return variables;
 	}
-
 }

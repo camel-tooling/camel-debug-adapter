@@ -204,14 +204,18 @@ public class BacklogDebuggerConnectionManager {
 
 	public void resumeAll() {
 		for (CamelThread camelThread : camelThreads) {
-			ThreadEventArguments threadEventArguments = new ThreadEventArguments();
-			threadEventArguments.setReason(ThreadEventArgumentsReason.EXITED);
-			threadEventArguments.setThreadId(camelThread.getId());
-			client.thread(threadEventArguments);
+			sendThreadExitEvent(camelThread);
 		}
 		backlogDebugger.resumeAll();
 		camelThreads.clear();
 		notifiedSuspendedBreakpointIds.clear();
+	}
+
+	private void sendThreadExitEvent(CamelThread camelThread) {
+		ThreadEventArguments threadEventArguments = new ThreadEventArguments();
+		threadEventArguments.setReason(ThreadEventArgumentsReason.EXITED);
+		threadEventArguments.setThreadId(camelThread.getId());
+		client.thread(threadEventArguments);
 	}
 
 	public Set<CamelThread> getCamelThreads() {
@@ -225,6 +229,13 @@ public class BacklogDebuggerConnectionManager {
 	public void removeBreakpoint(String previouslySetBreakpointId) {
 		backlogDebugger.removeBreakpoint(previouslySetBreakpointId);
 		this.camelBreakpointsWithSources.remove(previouslySetBreakpointId);
+	}
+
+	public void resume(CamelThread camelThread) {
+		backlogDebugger.resumeBreakpoint(camelThread.getBreakPointId());
+		notifiedSuspendedBreakpointIds.remove(camelThread.getBreakPointId());
+		camelThreads.remove(camelThread);
+		sendThreadExitEvent(camelThread);
 	}
 
 }

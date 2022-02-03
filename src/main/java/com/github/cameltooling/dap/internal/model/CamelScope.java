@@ -16,41 +16,48 @@
  */
 package com.github.cameltooling.dap.internal.model;
 
-import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
-import org.eclipse.lsp4j.debug.Source;
-import org.eclipse.lsp4j.debug.StackFrame;
+import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.Variable;
 
-public class CamelStackFrame extends StackFrame {
+public abstract class CamelScope extends Scope {
 
-	private Set<CamelScope> scopes = new HashSet<>();
+	private String breakpointId;
 
-	public CamelStackFrame(int frameId, String breakpointId, Source source, Integer line) {
-		setId(frameId);
-		setName(breakpointId);
-		setSource(source);
-		setLine(line);
+	protected CamelScope(String name, String breakpointId, int variableRefId) {
+		setName(name);
+		setVariablesReference(variableRefId);
+		this.breakpointId = breakpointId;
+	}
+
+	public String getBreakpointId() {
+		return breakpointId;
 	}
 	
-	public Set<CamelScope> createScopes() {
-		scopes.clear();
-		scopes.add(new CamelDebuggerScope(this));
-		scopes.add(new CamelEndpointScope(this));
-		scopes.add(new CamelProcessorScope(this));
-		scopes.add(new CamelExchangeScope(this));
-		scopes.add(new CamelMessageScope(this));
-		return scopes;
+	public abstract Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger);
+	
+	protected Variable createVariable(String variableName, String variableValue) {
+		Variable variable = new Variable();
+		variable.setName(variableName);
+		variable.setValue(variableValue);
+		return variable;
 	}
-
-	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
-		Set<Variable> variables = new HashSet<>();
-		for (CamelScope camelScope : scopes) {
-			variables.addAll(camelScope.createVariables(variablesReference, debugger));
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (!super.equals(obj)) {
+			return false;
 		}
-		return variables;
+		CamelScope that = (CamelScope) obj;
+		return Objects.equals(this.breakpointId, that.breakpointId);
+	}
+	
+	@Override
+	public int hashCode() {
+		return Objects.hash(super.hashCode(), breakpointId);
 	}
 
 }
