@@ -17,10 +17,12 @@
 package com.github.cameltooling.dap.internal.model;
 
 import java.util.Objects;
+import java.util.Set;
 
+import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.eclipse.lsp4j.debug.Source;
-import org.eclipse.lsp4j.debug.StackFrame;
 import org.eclipse.lsp4j.debug.Thread;
+import org.eclipse.lsp4j.debug.Variable;
 
 import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.types.EventMessage;
@@ -28,7 +30,7 @@ import com.github.cameltooling.dap.internal.types.EventMessage;
 public class CamelThread extends Thread {
 
 	private String breakpointId;
-	private StackFrame stackFrame;
+	private CamelStackFrame stackFrame;
 	private EventMessage eventMessage;
 
 	public CamelThread(int threadId, String breakpointId, EventMessage eventMessage, CamelBreakpoint camelBreakpoint) {
@@ -69,7 +71,7 @@ public class CamelThread extends Thread {
 		return breakpointId;
 	}
 
-	public StackFrame getStackFrame() {
+	public CamelStackFrame getStackFrame() {
 		return stackFrame;
 	}
 
@@ -85,4 +87,7 @@ public class CamelThread extends Thread {
 		// TODO : implement update of Thread when same exchange id is suspended 2 times
 	}
 
+	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
+		return stackFrame.createVariables(variablesReference, debugger);
+	}
 }

@@ -19,7 +19,6 @@ package com.github.cameltooling.dap.internal;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -59,11 +58,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 
 import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
+import com.github.cameltooling.dap.internal.model.CamelScope;
+import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 import com.github.cameltooling.dap.internal.model.CamelThread;
-import com.github.cameltooling.dap.internal.types.EventMessage;
-import com.github.cameltooling.dap.internal.types.ExchangeProperty;
-import com.github.cameltooling.dap.internal.types.Header;
-import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
@@ -71,14 +68,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 
 	private IDebugProtocolClient client;
 	private BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
-	private Map<Integer, String> endpointVariableReferenceToBreakpointId = new HashMap<>();
-	private Map<Integer, String> frameIdToBreakpointId = new HashMap<>();
-	private Map<Integer, String> processorVariableReferenceToBreakpointId = new HashMap<>();
-	private Map<Integer, String> messagevariableReferenceToBreakpointId = new HashMap<>();
-	private Map<Integer, String> debuggerVariableReferenceToBreakpointId = new HashMap<>();
-	private Map<Integer, String> exchangeVariableReferenceToBreakpointId = new HashMap<>();
-	private Map<Integer, List<Header>> headersVariableReferenceToHeaders = new HashMap<>();
-	private Map<Integer, List<ExchangeProperty>> variableReferenceToExchangeProperties = new HashMap<>();
+
 	private Map<String, Set<String>> sourceToBreakpointIds = new HashMap<>();
 
 	public void connect(IDebugProtocolClient clientProxy) {
@@ -173,136 +163,48 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<ScopesResponse> scopes(ScopesArguments args) {
 		ScopesResponse response = new ScopesResponse();
-		Optional<CamelThread> camelThreadOptional = connectionManager.getCamelThreads().stream()
-				.filter(camelThread -> args.getFrameId() == camelThread.getStackFrame().getId())
+		Optional<CamelStackFrame> camelStackFrameOptional = connectionManager.getCamelThreads().stream()
+				.map(CamelThread::getStackFrame)
+				.filter(stackFrame -> args.getFrameId() == stackFrame.getId())
 				.findAny();
-		Set<Scope> scopes = new HashSet<>();
-		if (camelThreadOptional.isPresent()) {
-			String breakpointId = camelThreadOptional.get().getBreakPointId();
-			
-			scopes.add(createScope("Debugger", breakpointId, debuggerVariableReferenceToBreakpointId));
-			scopes.add(createScope("Endpoint", breakpointId, endpointVariableReferenceToBreakpointId));
-			scopes.add(createScope("Processor", breakpointId, processorVariableReferenceToBreakpointId));
-			scopes.add(createScope("Exchange", breakpointId, exchangeVariableReferenceToBreakpointId));
-			scopes.add(createScope("Message", breakpointId, messagevariableReferenceToBreakpointId));
+		Set<CamelScope> scopes = new HashSet<>();
+		if (camelStackFrameOptional.isPresent()) {
+			scopes = camelStackFrameOptional.get().createScopes();
 		}
 		response.setScopes(scopes.toArray(new Scope[scopes.size()]));
 		return CompletableFuture.completedFuture(response);
 	}
 
-	private Scope createScope(String name, String breakpointId, Map<Integer, String> variableReferences) {
-		Scope scope = new Scope();
-		scope.setName(name);
-		int variableRefId = IdUtils.getPositiveIntFromHashCode(("@"+ name + "@" + breakpointId).hashCode());
-		scope.setVariablesReference(variableRefId);
-		variableReferences.put(variableRefId, breakpointId);
-		return scope;
-	}
-	
 	@Override
 	public CompletableFuture<VariablesResponse> variables(VariablesArguments args) {
 		int variablesReference = args.getVariablesReference();
 		VariablesResponse response = new VariablesResponse();
 		Set<Variable> variables = new HashSet<>();
-
+		
 		ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
-		
-		String breakpointId = endpointVariableReferenceToBreakpointId.get(variablesReference);
-		if (breakpointId != null) {
-			//TODO: retrieve name instead of ID
-			variables.add(createVariable("Name", breakpointId));
+		for (CamelThread camelThread : connectionManager.getCamelThreads()) {
+			variables.addAll(camelThread.createVariables(variablesReference, debugger));
 		}
-		breakpointId = messagevariableReferenceToBreakpointId.get(variablesReference);
-		if (breakpointId != null) {
-			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);
-			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
-			if(eventMessage != null) {
-				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
-				variables.add(createVariable("UID", Long.toString(eventMessage.getUid())));
-				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
-				Variable headersVariable = new Variable();
-				headersVariable.setName("Headers");
-				headersVariable.setValue("");
-				int headerVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@headers@").hashCode());
-				headersVariableReferenceToHeaders.put(headerVarRefId, eventMessage.getMessage().getHeaders());
-				headersVariable.setVariablesReference(headerVarRefId);
-				variables.add(headersVariable);
-			}
-		}
-		
-		List<Header> headers = headersVariableReferenceToHeaders.get(variablesReference);
-		if(headers != null) {
-			for (Header header : headers) {
-				variables.add(createVariable(header.getKey(), header.getValue()));
-			}
-		}
-		
-		breakpointId = processorVariableReferenceToBreakpointId.get(variablesReference);
-		if (breakpointId != null){
-			variables.add(createVariable("Processor Id", breakpointId));
-			//TODO: variables.add(createVariable("Route Id", connectionManager.getBacklogDebugger().getRouteId(breakpointId)));
-			variables.add(createVariable("Camel Id", debugger.getCamelId()));
-			//TODO: variables.add(createVariable("Completed Exchange", debugger.getCompletedExchanges(breakpointId)));
-		}
-		
-		breakpointId = debuggerVariableReferenceToBreakpointId.get(variablesReference);
-		if(breakpointId != null) {
-			variables.add(createVariable("Logging level", debugger.getLoggingLevel()));
-			variables.add(createVariable("Max chars for body", Integer.toString(debugger.getBodyMaxChars())));
-			variables.add(createVariable("Debug counter", Long.toString(debugger.getDebugCounter())));
-			variables.add(createVariable("Fallback timeout", Long.toString(debugger.getFallbackTimeout())));
-			variables.add(createVariable("Body include files", Boolean.toString(debugger.isBodyIncludeFiles())));
-			variables.add(createVariable("Body include streams", Boolean.toString(debugger.isBodyIncludeStreams())));
-		}
-		
-		breakpointId = exchangeVariableReferenceToBreakpointId.get(variablesReference);
-		if(breakpointId != null) {
-			String xml = debugger.dumpTracedMessagesAsXml(breakpointId, true);
-			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
-			if(eventMessage != null) {
-				variables.add(createVariable("ID", eventMessage.getExchangeId()));
-				variables.add(createVariable("To node", eventMessage.getToNode()));
-				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
-				Variable exchangeVariable = new Variable();
-				exchangeVariable.setName("Properties");
-				exchangeVariable.setValue("");
-				int exchangeVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@exchange@").hashCode());
-				variableReferenceToExchangeProperties.put(exchangeVarRefId, eventMessage.getExchangeProperties());
-				exchangeVariable.setVariablesReference(exchangeVarRefId);
-				variables.add(exchangeVariable);
-			}
-		}
-		
-		List<ExchangeProperty> exchangeProperties = variableReferenceToExchangeProperties.get(variablesReference);
-		if (exchangeProperties != null) {
-			for (ExchangeProperty exchangeProperty : exchangeProperties) {
-				variables.add(createVariable(exchangeProperty.getName(), exchangeProperty.getContent()));
-			}
-		}
-		
 		response.setVariables(variables.toArray(new Variable[variables.size()]));
 		return CompletableFuture.completedFuture(response);
 	}
 
-	private Variable createVariable(String variableName, String variableValue) {
-		Variable processorIdVariable = new Variable();
-		processorIdVariable.setName(variableName);
-		processorIdVariable.setValue(variableValue);
-		return processorIdVariable;
-	}
-	
 	@Override
 	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {
-		debuggerVariableReferenceToBreakpointId.clear();
-		endpointVariableReferenceToBreakpointId.clear();
-		exchangeVariableReferenceToBreakpointId.clear();
-		frameIdToBreakpointId.clear();
-		headersVariableReferenceToHeaders.clear();
-		messagevariableReferenceToBreakpointId.clear();
-		processorVariableReferenceToBreakpointId.clear();
-		variableReferenceToExchangeProperties.clear();
-		connectionManager.resumeAll();
-		return CompletableFuture.completedFuture(new ContinueResponse());
+		ContinueResponse response = new ContinueResponse();
+		int threadId = args.getThreadId();
+		if (threadId != 0) {
+			response.setAllThreadsContinued(Boolean.FALSE);
+			Optional<CamelThread> findAny = connectionManager.getCamelThreads().stream().filter(camelThread -> camelThread.getId() == threadId).findAny();
+			if (findAny.isPresent()) {
+				CamelThread camelThread = findAny.get();
+				connectionManager.resume(camelThread);
+			}
+		} else {
+			connectionManager.resumeAll();
+			response.setAllThreadsContinued(Boolean.TRUE);
+		}
+		return CompletableFuture.completedFuture(response);
 	}
 	
 	@Override

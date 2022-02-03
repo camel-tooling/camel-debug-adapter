@@ -20,35 +20,25 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
-import org.eclipse.lsp4j.debug.Source;
-import org.eclipse.lsp4j.debug.StackFrame;
 import org.eclipse.lsp4j.debug.Variable;
 
-public class CamelStackFrame extends StackFrame {
+import com.github.cameltooling.dap.internal.IdUtils;
 
-	private Set<CamelScope> scopes = new HashSet<>();
+public class CamelDebuggerScope extends CamelScope {
 
-	public CamelStackFrame(int frameId, String breakpointId, Source source, Integer line) {
-		setId(frameId);
-		setName(breakpointId);
-		setSource(source);
-		setLine(line);
+	public CamelDebuggerScope(CamelStackFrame stackframe) {
+		super("Debugger", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Debugger@" + stackframe.getName()).hashCode()));
 	}
 	
-	public Set<CamelScope> createScopes() {
-		scopes.clear();
-		scopes.add(new CamelDebuggerScope(this));
-		scopes.add(new CamelEndpointScope(this));
-		scopes.add(new CamelProcessorScope(this));
-		scopes.add(new CamelExchangeScope(this));
-		scopes.add(new CamelMessageScope(this));
-		return scopes;
-	}
-
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
-		for (CamelScope camelScope : scopes) {
-			variables.addAll(camelScope.createVariables(variablesReference, debugger));
+		if(variablesReference == getVariablesReference()) {
+			variables.add(createVariable("Logging level", debugger.getLoggingLevel()));
+			variables.add(createVariable("Max chars for body", Integer.toString(debugger.getBodyMaxChars())));
+			variables.add(createVariable("Debug counter", Long.toString(debugger.getDebugCounter())));
+			variables.add(createVariable("Fallback timeout", Long.toString(debugger.getFallbackTimeout())));
+			variables.add(createVariable("Body include files", Boolean.toString(debugger.isBodyIncludeFiles())));
+			variables.add(createVariable("Body include streams", Boolean.toString(debugger.isBodyIncludeStreams())));
 		}
 		return variables;
 	}
