@@ -24,14 +24,14 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 - Attach only
 - Java DSL (not tested with xml and Yaml even if it should work)
 - Single context
-- Single breakpoint
 - Add and remove breakpoint
 - Inspect some variables when breakpoint is hit
 - Stop on hit breakpoint
-- Resume all
+- Resume a single route instance and resume all
 - Stepping when the route definition is in the same file
-- Tested manually with [Eclipse LSP4E](https://github.com/eclipse/lsp4e), see [how-to](https://github.com/camel-tooling/camel-dap-client-eclipse#how-to-use-the-debug-adapter-for-apache-camel)
-- Tested manually with locally built [VS Code Debug Adapter for Apache Camel](https://github.com/camel-tooling/camel-dap-client-vscode), see [how-to](https://github.com/camel-tooling/camel-dap-client-vscode#how-to-use-it)
+- Specific client provided:
+  - on [Eclipse Desktop](https://github.com/camel-tooling/camel-dap-client-eclipse), install from [this update site](https://camel-tooling.github.io/camel-dap-client-eclipse/)
+  - on [VS Code](https://github.com/camel-tooling/camel-dap-client-vscode), snapshot binary available [here](https://download.jboss.org/jbosstools/vscode/snapshots/vscode-debug-adapter-apache-camel/)
 
 ## How to use it
 
@@ -40,6 +40,9 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 
 ```json
 {
-"attach_pid": "xxxxx"
+"attach_pid": "xxxxx",
+"request": "attach"
 }
 ```
+
+Note that the request parameter is not part of the protocol but required by some clients (at least VS Code and Eclipse desktop).
