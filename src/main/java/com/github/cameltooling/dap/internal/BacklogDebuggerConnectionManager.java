@@ -33,6 +33,10 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathFactory;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
@@ -44,6 +48,8 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
 import com.github.cameltooling.dap.internal.model.CamelThread;
@@ -69,6 +75,8 @@ public class BacklogDebuggerConnectionManager {
 	private Set<CamelThread> camelThreads = new HashSet<>();
 	int threadIdCounter = 1;
 	private Map<String, CamelBreakpoint> camelBreakpointsWithSources = new HashMap<>();
+	
+	private boolean isStepping = false;
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -117,28 +125,8 @@ public class BacklogDebuggerConnectionManager {
 	private void checkSuspendedBreakpoints() {
 		while(backlogDebugger != null && backlogDebugger.isEnabled()) {
 			Set<String> suspendedBreakpointNodeIds = backlogDebugger.suspendedBreakpointNodeIds();
-			// TODO: ensure list is cleaned at a time
 			for (String nodeId : suspendedBreakpointNodeIds) {
-				if (!notifiedSuspendedBreakpointIds.contains(nodeId)) {
-					StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
-					stoppedEventArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT);
-					stoppedEventArgs.setThreadId(threadIdCounter);
-					String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId, true);
-					EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
-					Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
-					if(thread.isEmpty()) {
-						camelThreads.add(new CamelThread(threadIdCounter, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
-						ThreadEventArguments threadEventArguments = new ThreadEventArguments();
-						threadEventArguments.setReason(ThreadEventArgumentsReason.STARTED);
-						threadEventArguments.setThreadId(threadIdCounter);
-						client.thread(threadEventArguments);
-						threadIdCounter++;
-					} else {
-						thread.get().update(nodeId, eventMessage);
-					}
-					notifiedSuspendedBreakpointIds.add(nodeId);
-					client.stopped(stoppedEventArgs);
-				}
+				handleSuspendedBreakpoint(nodeId);
 			}
 			
 			// TODO: might worth updating routesDomDocument?
@@ -150,7 +138,59 @@ public class BacklogDebuggerConnectionManager {
 				return;
 			}
 		}
-		
+	}
+
+	private void handleSuspendedBreakpoint(String nodeId) {
+		if (!isStepping && !notifiedSuspendedBreakpointIds.contains(nodeId)) {
+			StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
+			stoppedEventArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT);
+			String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId, true);
+			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
+			Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
+			if(thread.isEmpty()) {
+				camelThreads.add(new CamelThread(threadIdCounter, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
+				ThreadEventArguments threadEventArguments = new ThreadEventArguments();
+				threadEventArguments.setReason(ThreadEventArgumentsReason.STARTED);
+				threadEventArguments.setThreadId(threadIdCounter);
+				client.thread(threadEventArguments);
+				stoppedEventArgs.setThreadId(threadIdCounter);
+				threadIdCounter++;
+			} else {
+				CamelThread camelThread = thread.get();
+				CamelBreakpoint camelBreakpoint = retrieveCorrespondingBreakpoint(nodeId, camelThread);
+				stoppedEventArgs.setThreadId(camelThread.getId());
+				if (camelBreakpoint != null) {
+					camelThreads.remove(camelThread);
+					camelThreads.add(new CamelThread(camelThread.getId(), nodeId, eventMessage, camelBreakpoint));
+				}
+			}
+			notifiedSuspendedBreakpointIds.add(nodeId);
+			client.stopped(stoppedEventArgs);
+		}
+	}
+
+	private CamelBreakpoint retrieveCorrespondingBreakpoint(String nodeId, CamelThread camelThread) {
+		CamelBreakpoint camelBreakpoint = camelBreakpointsWithSources.get(nodeId);
+		if(camelBreakpoint != null) {
+			return camelBreakpoint;
+		} else {
+			String path = "//*[@id='" + nodeId + "']";
+	        XPath xPath = XPathFactory.newInstance().newXPath();
+			try {
+				Node tagNode = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
+				if (tagNode != null) {
+					Element tag = (Element) tagNode;
+					String lineNumber = tag.getAttribute("sourceLineNumber");
+					if (lineNumber != null && !"-1".equals(lineNumber.trim())) {
+						// Suppose that it is a stepping and we stay in the same file but just the line is modified
+						return new CamelBreakpoint(camelThread.getStackFrame().getSource(), Integer.valueOf(lineNumber));
+					}
+				}
+			} catch (XPathExpressionException e) {
+				LOGGER.warn("Cannot find the element with id "+ nodeId, e);
+			}
+		}
+		return null;
 	}
 
 	private Document retrieveRoutesWithSourceLineNumber(String jmxAddress) throws Exception{
@@ -236,6 +276,46 @@ public class BacklogDebuggerConnectionManager {
 		notifiedSuspendedBreakpointIds.remove(camelThread.getBreakPointId());
 		camelThreads.remove(camelThread);
 		sendThreadExitEvent(camelThread);
+	}
+
+	public void next(CamelThread camelThread) {
+		isStepping = true;
+		String breakPointId = camelThread.getBreakPointId();
+		if(isLastInroute(breakPointId)) {
+			camelThreads.remove(camelThread);
+			sendThreadExitEvent(camelThread);
+		}
+		backlogDebugger.stepBreakpoint(breakPointId);
+		notifiedSuspendedBreakpointIds.remove(breakPointId);
+		isStepping = false;
+	}
+
+	private boolean isLastInroute(String id) {
+		String path = "//*[@id='" + id + "']";
+        XPath xPath = XPathFactory.newInstance().newXPath();
+        try {
+            Node tagNode = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
+            Element tag = (Element) tagNode;
+            Node sibling = tag.getNextSibling();
+            while (null != sibling && sibling.getNodeType() != Node.ELEMENT_NODE) {
+            	sibling = sibling.getNextSibling();
+            }
+            if (sibling != null) {
+            	return ((Element) sibling).getAttribute("id") == null;
+            } else {
+            	Node parent = tag.getParentNode();
+            	while (null != parent && parent.getNodeType() != Node.ELEMENT_NODE) {
+            		parent = parent.getNextSibling();
+            	}
+            	if (parent != null && !"route".equals(parent.getNodeName())) {
+            		Element parentElement = (Element) parent;
+            		return isLastInroute(parentElement.getAttribute("id"));
+            	}
+            }
+        } catch (XPathExpressionException e) {
+            return true;
+        }
+        return true;
 	}
 
 }

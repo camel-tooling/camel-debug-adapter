@@ -38,11 +38,12 @@ public class CamelThread extends Thread {
 		setName(eventMessage.getExchangeId());
 		this.breakpointId = breakpointId;
 		this.eventMessage = eventMessage;
-		// TODO: provide a better hashcode for stackframe containing the camelcontext too
-		int frameId = IdUtils.getPositiveIntFromHashCode(breakpointId.hashCode());
+		// TODO: provide a better hashcode for stackframe containing the camelcontext
+		// too
+		int frameId = IdUtils.getPositiveIntFromHashCode(threadId + breakpointId.hashCode());
 		Source source = null;
 		Integer line = null;
-		if(camelBreakpoint != null) {
+		if (camelBreakpoint != null) {
 			source = camelBreakpoint.getSource();
 			line = camelBreakpoint.getLine();
 		} else {
@@ -61,7 +62,7 @@ public class CamelThread extends Thread {
 				&& Objects.equals(this.eventMessage, that.eventMessage)
 				&& Objects.equals(this.stackFrame, that.stackFrame);
 	}
-	
+
 	@Override
 	public int hashCode() {
 		return Objects.hash(super.hashCode(), breakpointId, eventMessage, stackFrame);
@@ -79,15 +80,8 @@ public class CamelThread extends Thread {
 		return eventMessage != null ? eventMessage.getExchangeId() : null;
 	}
 
-	public void update(String breakpointId, EventMessage eventMessage) {
-		if(!eventMessage.getExchangeId().equals(this.eventMessage.getExchangeId())) {
-			throw new IllegalArgumentException("The Camel Thread must be reused only for same Exchange Id");
-		}
-		this.breakpointId = breakpointId;
-		// TODO : implement update of Thread when same exchange id is suspended 2 times
-	}
-
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		return stackFrame.createVariables(variablesReference, debugger);
 	}
+
 }

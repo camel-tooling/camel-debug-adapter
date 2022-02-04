@@ -35,6 +35,7 @@ import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.ContinueResponse;
 import org.eclipse.lsp4j.debug.DisconnectArguments;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
+import org.eclipse.lsp4j.debug.NextArguments;
 import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.ScopesArguments;
 import org.eclipse.lsp4j.debug.ScopesResponse;
@@ -195,7 +196,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		int threadId = args.getThreadId();
 		if (threadId != 0) {
 			response.setAllThreadsContinued(Boolean.FALSE);
-			Optional<CamelThread> findAny = connectionManager.getCamelThreads().stream().filter(camelThread -> camelThread.getId() == threadId).findAny();
+			Optional<CamelThread> findAny = findThread(threadId);
 			if (findAny.isPresent()) {
 				CamelThread camelThread = findAny.get();
 				connectionManager.resume(camelThread);
@@ -205,6 +206,21 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			response.setAllThreadsContinued(Boolean.TRUE);
 		}
 		return CompletableFuture.completedFuture(response);
+	}
+
+	private Optional<CamelThread> findThread(int threadId) {
+		return connectionManager.getCamelThreads().stream().filter(camelThread -> camelThread.getId() == threadId).findAny();
+	}
+	
+	@Override
+	public CompletableFuture<Void> next(NextArguments args) {
+		int threadId = args.getThreadId();
+		Optional<CamelThread> findAny = findThread(threadId);
+		if (findAny.isPresent()) {
+			CamelThread camelThread = findAny.get();
+			connectionManager.next(camelThread);
+		}
+		return CompletableFuture.completedFuture(null);
 	}
 	
 	@Override
