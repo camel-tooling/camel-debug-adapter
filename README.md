@@ -29,6 +29,7 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 - Inspect some variables when breakpoint is hit
 - Stop on hit breakpoint
 - Resume all
+- Stepping when the route definition is in the same file
 - Tested manually with [Eclipse LSP4E](https://github.com/eclipse/lsp4e), see [how-to](https://github.com/camel-tooling/camel-dap-client-eclipse#how-to-use-the-debug-adapter-for-apache-camel)
 - Tested manually with locally built [VS Code Debug Adapter for Apache Camel](https://github.com/camel-tooling/camel-dap-client-vscode), see [how-to](https://github.com/camel-tooling/camel-dap-client-vscode#how-to-use-it)
 
