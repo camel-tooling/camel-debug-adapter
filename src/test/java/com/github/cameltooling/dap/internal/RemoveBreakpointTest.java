@@ -76,6 +76,8 @@ class RemoveBreakpointTest extends BaseTest {
 		
 		assertThat(asyncSendBody.isDone()).isFalse();
 		
+		awaitAllVariablesFilled(0);
+		
 		assertThat(clientProxy.getAllStacksAndVars()).hasSize(1);
 		StackAndVarOnStopEvent stackAndData = clientProxy.getAllStacksAndVars().get(0);
 		assertThat(stackAndData.getThreads()).hasSize(1);

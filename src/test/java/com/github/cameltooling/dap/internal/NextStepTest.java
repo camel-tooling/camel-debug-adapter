@@ -17,7 +17,6 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -34,8 +33,6 @@ import org.junit.jupiter.api.Test;
 
 class NextStepTest extends BaseTest {
 	
-	private static final int DEFAULT_VARIABLES_NUMBER = 19;
-
 	@Test
 	void testSteppingInsideRoute() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
@@ -52,7 +49,7 @@ class NextStepTest extends BaseTest {
 						.log("last log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 50;
+			int firstLineNumberToPutBreakpoint = 47;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -71,7 +68,7 @@ class NextStepTest extends BaseTest {
 			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
-			await().untilAsserted(() -> assertThat(clientProxy.getAllStacksAndVars().get(0).getVariables()).hasSize(DEFAULT_VARIABLES_NUMBER));
+			awaitAllVariablesFilled(0);
 			
 			NextArguments nextArguments = new NextArguments();
 			nextArguments.setThreadId(1);
@@ -82,7 +79,7 @@ class NextStepTest extends BaseTest {
 			assertThat(secondStoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(secondStoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
-			await().untilAsserted(() -> assertThat(clientProxy.getAllStacksAndVars().get(1).getVariables()).hasSize(DEFAULT_VARIABLES_NUMBER));
+			awaitAllVariablesFilled(1);
 			server.continue_(new ContinueArguments());
 			
 			waitRouteIsDone(asyncSendBody);
@@ -92,7 +89,7 @@ class NextStepTest extends BaseTest {
 			producerTemplate.stop();
 		}
 	}
-	
+
 	@Test
 	void testSteppingAtEndOfRoute() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
@@ -109,7 +106,7 @@ class NextStepTest extends BaseTest {
 						.log("last log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 109;
+			int firstLineNumberToPutBreakpoint = 106;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -128,7 +125,7 @@ class NextStepTest extends BaseTest {
 			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
-			await().untilAsserted(() -> assertThat(clientProxy.getAllStacksAndVars().get(0).getVariables()).hasSize(DEFAULT_VARIABLES_NUMBER));
+			awaitAllVariablesFilled(0);
 			
 			NextArguments nextArguments = new NextArguments();
 			nextArguments.setThreadId(1);
@@ -158,7 +155,7 @@ class NextStepTest extends BaseTest {
 						.log("last log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 156;
+			int firstLineNumberToPutBreakpoint = 153;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -177,7 +174,7 @@ class NextStepTest extends BaseTest {
 			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
-			await().untilAsserted(() -> assertThat(clientProxy.getAllStacksAndVars().get(0).getVariables()).hasSize(DEFAULT_VARIABLES_NUMBER));
+			awaitAllVariablesFilled(0);
 			
 			NextArguments nextArguments = new NextArguments();
 			nextArguments.setThreadId(1);
@@ -188,7 +185,7 @@ class NextStepTest extends BaseTest {
 			assertThat(secondStoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(secondStoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
-			await().untilAsserted(() -> assertThat(clientProxy.getAllStacksAndVars().get(1).getVariables()).hasSize(DEFAULT_VARIABLES_NUMBER));
+			awaitAllVariablesFilled(1);
 			server.continue_(new ContinueArguments());
 			
 			waitRouteIsDone(asyncSendBody);
