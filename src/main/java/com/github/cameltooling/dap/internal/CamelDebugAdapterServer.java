@@ -183,7 +183,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Set<Variable> variables = new HashSet<>();
 		
 		ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
-		for (CamelThread camelThread : connectionManager.getCamelThreads()) {
+		for (CamelThread camelThread : new HashSet<CamelThread>(connectionManager.getCamelThreads())) {
 			variables.addAll(camelThread.createVariables(variablesReference, debugger));
 		}
 		response.setVariables(variables.toArray(new Variable[variables.size()]));
