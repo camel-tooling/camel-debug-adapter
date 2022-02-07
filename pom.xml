@@ -48,7 +48,7 @@
 
 		<version.camel>3.15.0</version.camel>
 		<!-- must be aligned with the one from Camel -->
-		<version.jaxb>2.3.3</version.jaxb>
+		<version.jaxb>3.0.1</version.jaxb>
 	</properties>
 
 	<build>
