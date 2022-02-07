@@ -38,4 +38,4 @@ jobs:
         name: log-camel-dap.log
         path: /tmp/log-camel-dap.log
         if-no-files-found: error
-      if: ${{ runner.os == 'Linux' }}
+      if: ${{ always() && runner.os == 'Linux' }}
