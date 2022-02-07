@@ -17,7 +17,6 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.awaitility.Awaitility.await;
 
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -49,7 +48,7 @@ class ResumeAllTest extends BaseTest {
 						.log("Log from test");  // line number to use from here
 				}
 			});
-			int lineNumberToPutBreakpoint = 49;
+			int lineNumberToPutBreakpoint = 48;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
@@ -68,7 +67,7 @@ class ResumeAllTest extends BaseTest {
 			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(index);
 			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
-			waitForBodyVariable(0);
+			awaitAllVariablesFilled(0);
 			Variable bodyVariable1 = findBodyVariableAtIndex(index).get();
 			assertThat(bodyVariable1.getValue()).isEqualTo("a body");
 			
@@ -84,19 +83,12 @@ class ResumeAllTest extends BaseTest {
 			
 			waitBreakpointNotification(2);
 			
-			waitForBodyVariable(1);
+			awaitAllVariablesFilled(1);
 			Variable bodyVariable2 = findBodyVariableAtIndex(1).get();
 			assertThat(bodyVariable2.getValue()).isEqualTo("a body 2");
 			
 			producerTemplate.stop();
 		}
-	}
-
-	private void waitForBodyVariable(int index) {
-		await("Wait for body variable to be filled up")
-			.until(() -> {
-				return findBodyVariableAtIndex(index).isPresent();
-			});
 	}
 
 	private Optional<Variable> findBodyVariableAtIndex(int index) {
@@ -118,7 +110,7 @@ class ResumeAllTest extends BaseTest {
 						.log("second log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 117;
+			int firstLineNumberToPutBreakpoint = 109;
 			int secondLineNumberToPutBreakpoint = firstLineNumberToPutBreakpoint + 1;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
@@ -138,6 +130,7 @@ class ResumeAllTest extends BaseTest {
 			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
+			awaitAllVariablesFilled(0);
 			server.continue_(new ContinueArguments());
 			
 			waitBreakpointNotification(2);
@@ -145,6 +138,7 @@ class ResumeAllTest extends BaseTest {
 			assertThat(secondStoppedEventArgument.getThreadId()).isEqualTo(2);
 			assertThat(secondStoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(asyncSendBody.isDone()).isFalse();
+			awaitAllVariablesFilled(1);
 			server.continue_(new ContinueArguments());
 			
 			waitRouteIsDone(asyncSendBody);

@@ -67,9 +67,11 @@ class ResumeSingleThreadTest extends BaseTest {
 			
 			CompletableFuture<Object> asyncSendBody1 = producerTemplate.asyncSendBody(startEndpointUri1, "a body1");
 			waitBreakpointNotification(1);
+			awaitAllVariablesFilled(0);
 			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(startEndpointUri2, "a body2");
 			
 			waitBreakpointNotification(2);
+			awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER *2);
 			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
 			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);

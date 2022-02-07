@@ -36,6 +36,7 @@ import org.junit.jupiter.api.AfterEach;
 
 public abstract class BaseTest {
 
+	protected static final int DEFAULT_VARIABLES_NUMBER = 19;
 	protected CamelDebugAdapterServer server;
 	protected DummyCamelDebugClient clientProxy;
 
@@ -108,6 +109,16 @@ public abstract class BaseTest {
 		clientProxy = new DummyCamelDebugClient(server);
 		server.connect(clientProxy);
 		return server.initialize(new InitializeRequestArguments());
+	}
+
+	protected void awaitAllVariablesFilled(int indexOfAllStacksAndVars, int variablesNumber) {
+		await().untilAsserted(() -> {
+			assertThat(clientProxy.getAllStacksAndVars().get(indexOfAllStacksAndVars).getVariables()).hasSize(variablesNumber);
+		});
+	}
+	
+	protected void awaitAllVariablesFilled(int indexOfAllStacksAndVars) {
+		awaitAllVariablesFilled(indexOfAllStacksAndVars, DEFAULT_VARIABLES_NUMBER);
 	}
 
 }
