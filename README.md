@@ -1,3 +1,4 @@
+[![Build and Test](https://github.com/camel-tooling/camel-debug-adapter/actions/workflows/ci.yaml/badge.svg)](https://github.com/camel-tooling/camel-debug-adapter/actions/workflows/ci.yaml)
 [![License](https://img.shields.io/badge/license-Apache%202-blue.svg)]()
 [![Zulip chat](https://img.shields.io/badge/zulip-join_chat-brightgreen.svg)](https://camel.zulipchat.com/#narrow/stream/258729-camel-tooling)
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=camel-tooling_camel-debug-adapter&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=camel-tooling_camel-debug-adapter)
