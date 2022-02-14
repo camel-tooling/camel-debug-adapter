@@ -43,17 +43,17 @@ class MultipleThreadsTest extends BaseTest {
 				@Override
 				public void configure() throws Exception {
 					from(startEndpointUri1)
-						.log("Log from test 1");  // line number to use from here
+						.log("Log from test 1");  // XXX-breakpoint1-XXX
 					
 					from(startEndpointUri2)
-						.log("Log from test 2");  // line number to use from here
+						.log("Log from test 2");  // XXX-breakpoint2-XXX
 				}
 			});
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(46, 49);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint1-XXX", "XXX-breakpoint2-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			

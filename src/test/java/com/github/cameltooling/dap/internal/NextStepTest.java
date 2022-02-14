@@ -44,17 +44,16 @@ class NextStepTest extends BaseTest {
 				public void configure() throws Exception {
 					from(startEndpointUri)
 						.routeId(routeId)
-						.log("Log from test")  // line number to use from here
+						.log("Log from test")  // XXX-breakpoint-step-inside-XXX
 						.log("second log")
 						.log("last log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 47;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(firstLineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-step-inside-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			
@@ -101,17 +100,16 @@ class NextStepTest extends BaseTest {
 				public void configure() throws Exception {
 					from(startEndpointUri)
 						.routeId(routeId)
-						.log("Log from test")  // line number to use from here
+						.log("Log from test")  
 						.log("second log")
-						.log("last log");
+						.log("last log"); // XXX-breakpoint-step-at-end-XXX
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 106;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(firstLineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-step-at-end-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			
@@ -150,17 +148,16 @@ class NextStepTest extends BaseTest {
 				public void configure() throws Exception {
 					from(startEndpointUri)
 						.routeId(routeId)
-						.log("Log from test")  // line number to use from here
-						.log("second log")
+						.log("Log from test")  // XXX-breakpoint-step-with-existing-breakpoint-XXX
+						.log("second log") // XXX-breakpoint-step-with-existing-breakpoint2-XXX
 						.log("last log");
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 153;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(firstLineNumberToPutBreakpoint, firstLineNumberToPutBreakpoint + 1);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-step-with-existing-breakpoint-XXX", "XXX-breakpoint-step-with-existing-breakpoint2-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			

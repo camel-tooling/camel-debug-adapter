@@ -45,15 +45,14 @@ class ResumeAllTest extends BaseTest {
 				public void configure() throws Exception {
 					from(startEndpointUri)
 						.routeId(routeId)
-						.log("Log from test");  // line number to use from here
+						.log("Log from test");  // XXX-breakpoint-another-route-instance-XXX
 				}
 			});
-			int lineNumberToPutBreakpoint = 48;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-another-route-instance-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			
@@ -106,17 +105,15 @@ class ResumeAllTest extends BaseTest {
 				public void configure() throws Exception {
 					from(startEndpointUri)
 						.routeId(routeId)
-						.log("Log from test")  // line number to use from here
-						.log("second log");
+						.log("Log from test")  // XXX-breakpoint-same-route-instance-XXX
+						.log("second log"); // XXX-breakpoint-same-route-instance-2-XXX
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 109;
-			int secondLineNumberToPutBreakpoint = firstLineNumberToPutBreakpoint + 1;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(firstLineNumberToPutBreakpoint, secondLineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-same-route-instance-XXX", "XXX-breakpoint-same-route-instance-2-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			
