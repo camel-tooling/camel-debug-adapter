@@ -41,15 +41,14 @@ class RemoveBreakpointTest extends BaseTest {
 				@Override
 				public void configure() throws Exception {
 					from(fromUri)
-						.log("Log from test"); // line number to use from here
+						.log("Log from test"); // XXX-breakpoint-XXX
 				}
 			});
-			int lineNumberToPutBreakpoint = 44;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX");
 			server.setBreakpoints(setBreakpointsArguments).get();
 			
 			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, fromUri);

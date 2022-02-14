@@ -20,8 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.lsp4j.debug.Capabilities;
@@ -59,8 +61,7 @@ public abstract class BaseTest {
 	protected void waitBreakpointNotification(int numberOfBreakpointNotifications) {
 		await("Wait that breakpoint hit is notified")
 			.atMost(Duration.ofSeconds(3))
-			.until(() -> 
-			{ 
+			.until(() -> {
 				return clientProxy.getStoppedEventArguments().size() == numberOfBreakpointNotifications;
 			});
 	}
@@ -87,21 +88,38 @@ public abstract class BaseTest {
 		return bodyVariable;
 	}
 
-	protected SetBreakpointsArguments createSetBreakpointArgument(int... lineNumberToPutBreakpoints) {
+	protected SetBreakpointsArguments createSetBreakpointArgument(String... markersToPutBreakpoint)
+			throws FileNotFoundException {
 		SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
 		Source source = new Source();
-		String pathToItself = (new File("src/test/java/"+getClass().getName()+".java")).getAbsolutePath();
+		File sourceFile = new File("src/test/java/" + getClass().getName().replaceAll("\\.", "/") + ".java");
+		String pathToItself = sourceFile.getAbsolutePath();
 		source.setPath(pathToItself);
 		setBreakpointsArguments.setSource(source);
-		SourceBreakpoint[] breakpoints = new SourceBreakpoint[lineNumberToPutBreakpoints.length];
-		for (int i = 0; i < lineNumberToPutBreakpoints.length; i++) {
-			int lineNumberToPutBreakpoint = lineNumberToPutBreakpoints[i];
+		SourceBreakpoint[] breakpoints = new SourceBreakpoint[markersToPutBreakpoint.length];
+		for (int i = 0; i < markersToPutBreakpoint.length; i++) {
+			String markerToPutBreakpoint = markersToPutBreakpoint[i];
+			int lineNumberToPutBreakpoint = findLineNumber(sourceFile, markerToPutBreakpoint);
 			SourceBreakpoint sourceBreakpoint = new SourceBreakpoint();
 			sourceBreakpoint.setLine(lineNumberToPutBreakpoint);
 			breakpoints[i] = sourceBreakpoint;
 		}
 		setBreakpointsArguments.setBreakpoints(breakpoints);
 		return setBreakpointsArguments;
+	}
+
+	private int findLineNumber(File sourceFile, String markerToPutBreakpoint) throws FileNotFoundException {
+		int line = 1;
+		try (Scanner scanner = new Scanner(sourceFile);) {
+			while (scanner.hasNextLine()) {
+				String lineContent = scanner.nextLine();
+				if (lineContent.contains(markerToPutBreakpoint)) {
+					return line;
+				}
+				line++;
+			}
+		}
+		return -1;
 	}
 
 	protected CompletableFuture<Capabilities> initDebugger() {
@@ -116,7 +134,7 @@ public abstract class BaseTest {
 			assertThat(clientProxy.getAllStacksAndVars().get(indexOfAllStacksAndVars).getVariables()).hasSize(variablesNumber);
 		});
 	}
-	
+
 	protected void awaitAllVariablesFilled(int indexOfAllStacksAndVars) {
 		awaitAllVariablesFilled(indexOfAllStacksAndVars, DEFAULT_VARIABLES_NUMBER);
 	}

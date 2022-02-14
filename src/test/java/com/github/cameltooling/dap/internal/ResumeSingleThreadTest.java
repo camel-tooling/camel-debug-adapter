@@ -45,20 +45,18 @@ class ResumeSingleThreadTest extends BaseTest {
 				public void configure() throws Exception {
 					from(startEndpointUri1)
 						.routeId(routeId1)
-						.log("Log from test 1");  // line number to use from here
+						.log("Log from test 1");  // XXX-breakpoint1-XXX
 						
 					from(startEndpointUri2)
 						.routeId(routeId2)
-						.log("Log from test 2");  // line number to use from here
+						.log("Log from test 2");  // XXX-breakpoint2-XXX
 				}
 			});
-			int firstLineNumberToPutBreakpoint = 48;
-			int secondLineNumberToPutBreakpoint = 52;
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(firstLineNumberToPutBreakpoint, secondLineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint1-XXX", "XXX-breakpoint2-XXX");
 			
 			server.setBreakpoints(setBreakpointsArguments).get();
 			

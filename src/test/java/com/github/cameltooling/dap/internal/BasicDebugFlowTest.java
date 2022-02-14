@@ -61,7 +61,7 @@ class BasicDebugFlowTest extends BaseTest {
 						.setHeader("header2", constant("value of header 2"))
 						.setProperty("property1", constant("value of property 1"))
 						.setProperty("property2", constant("value of property 2"))
-						.log("Log from test").id(logEndpointId); // line number to use from here
+						.log("Log from test").id(logEndpointId); // XXX-breakpoint-XXX
 				}
 			});
 			int lineNumberToPutBreakpoint = 64;
@@ -69,7 +69,7 @@ class BasicDebugFlowTest extends BaseTest {
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument(lineNumberToPutBreakpoint);
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX");
 			
 			SetBreakpointsResponse response = server.setBreakpoints(setBreakpointsArguments).get();
 			
