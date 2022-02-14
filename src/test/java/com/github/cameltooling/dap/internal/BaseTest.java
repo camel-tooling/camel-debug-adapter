@@ -88,11 +88,24 @@ public abstract class BaseTest {
 		return bodyVariable;
 	}
 
+	/**
+	 * @param markersToPutBreakpoint
+	 * 
+	 * It is using the current class as sourceFile
+	 * 
+	 * @return
+	 * @throws FileNotFoundException
+	 */
 	protected SetBreakpointsArguments createSetBreakpointArgument(String... markersToPutBreakpoint)
+			throws FileNotFoundException {
+		File sourceFile = new File("src/test/java/" + getClass().getName().replaceAll("\\.", "/") + ".java");
+		return createSetBreakpointArgument(sourceFile, markersToPutBreakpoint);
+	}
+
+	protected SetBreakpointsArguments createSetBreakpointArgument(File sourceFile, String... markersToPutBreakpoint)
 			throws FileNotFoundException {
 		SetBreakpointsArguments setBreakpointsArguments = new SetBreakpointsArguments();
 		Source source = new Source();
-		File sourceFile = new File("src/test/java/" + getClass().getName().replaceAll("\\.", "/") + ".java");
 		String pathToItself = sourceFile.getAbsolutePath();
 		source.setPath(pathToItself);
 		setBreakpointsArguments.setSource(source);

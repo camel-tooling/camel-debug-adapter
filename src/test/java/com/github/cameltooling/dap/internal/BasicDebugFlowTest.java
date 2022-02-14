@@ -19,13 +19,13 @@ package com.github.cameltooling.dap.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.Breakpoint;
@@ -37,7 +37,7 @@ import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.Test;
 
-class BasicDebugFlowTest extends BaseTest {
+abstract class BasicDebugFlowTest extends BaseTest {
 
 	/**
 	 * Basic flow:
@@ -51,25 +51,13 @@ class BasicDebugFlowTest extends BaseTest {
 		try (CamelContext context = new DefaultCamelContext()) {
 			String routeId = "a-route-id";
 			String logEndpointId = "testBasicFlow-log-id";
-			context.addRoutes(new RouteBuilder() {
-			
-				@Override
-				public void configure() throws Exception {
-					from("direct:testSetBreakpoint")
-						.routeId(routeId)
-						.setHeader("header1", constant("value of header 1"))
-						.setHeader("header2", constant("value of header 2"))
-						.setProperty("property1", constant("value of property 1"))
-						.setProperty("property2", constant("value of property 2"))
-						.log("Log from test").id(logEndpointId); // XXX-breakpoint-XXX
-				}
-			});
-			int lineNumberToPutBreakpoint = 64;
+			registerRouteToTest(context, routeId, logEndpointId);
 			context.start();
 			assertThat(context.isStarted()).isTrue();
 			initDebugger();
 			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX");
+			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument();
+			int lineNumberToPutBreakpoint = setBreakpointsArguments.getBreakpoints()[0].getLine();
 			
 			SetBreakpointsResponse response = server.setBreakpoints(setBreakpointsArguments).get();
 			
@@ -131,5 +119,9 @@ class BasicDebugFlowTest extends BaseTest {
 			producerTemplate.stop();
 		}
 	}
+
+	protected abstract SetBreakpointsArguments createSetBreakpointArgument() throws FileNotFoundException;
+
+	protected abstract void registerRouteToTest(CamelContext context, String routeId, String logEndpointId) throws Exception;
 	
 }
