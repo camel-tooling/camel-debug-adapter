@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/apache/camel/camel-3.15.0/dsl/camel-yaml-dsl/camel-yaml-dsl/src/generated/resources/camel-yaml-dsl.json
+- route:
+    id: a-route-id
+    from:
+      uri: direct:testSetBreakpoint
+      steps:
+        - setHeader:
+            name: header1
+            expression:
+              constant: value of header 1
+        - setHeader:
+            name: header2
+            expression:
+              constant: value of header 2
+        - setProperty:
+            name: property1
+            expression:
+              constant: value of property 1
+        - setProperty:
+            name: property2
+            expression:
+              constant: value of property 2
+        - to: # XXX-breakpoint-XXX
+            uri: log:Log From Test
+            id: testBasicFlow-log-id
