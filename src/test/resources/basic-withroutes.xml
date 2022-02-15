@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes xmlns="http://camel.apache.org/schema/spring"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://camel.apache.org/schema/spring https://camel.apache.org/schema/spring-xml/camel-spring-xml-3.15.0.xsd">
+	<route id="a-route-id">
+		<from uri="direct:testSetBreakpoint" />
+		<setHeader name="header1">
+			<constant>value of header 1</constant>
+		</setHeader>
+		<setHeader name="header2">
+			<constant>value of header 2</constant>
+		</setHeader>
+		<setProperty name="property1">
+			<constant>value of property 1</constant>
+		</setProperty>
+		<setProperty name="property2">
+			<constant>value of property 2</constant>
+		</setProperty>
+		<log message="Log From Test" id="testBasicFlow-log-id" /> <!-- XXX-breakpoint-XXX -->
+	</route>
+</routes>
