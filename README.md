@@ -23,8 +23,10 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 
 - Local only
 - Attach only
-- Java and Yaml DSL (not tested with xml even if it should work)
-  - specific note for yaml: the breakpoint must be set on the from/to line. Not on the Camel URI line.
+- Camel DSLs:
+  - Java DSL.
+  - Yaml DSL. Note that the breakpoint must be set on the from/to line, not on the Camel URI line.
+  - XML DSL in Camel Main mode. It implies that it is not working with Camel context specified in Camel XML file.
 - Single context
 - Add and remove breakpoint
 - Inspect some variables when breakpoint is hit
