@@ -36,6 +36,8 @@ import org.eclipse.lsp4j.debug.ContinueResponse;
 import org.eclipse.lsp4j.debug.DisconnectArguments;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
 import org.eclipse.lsp4j.debug.NextArguments;
+import org.eclipse.lsp4j.debug.OutputEventArguments;
+import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
 import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.ScopesArguments;
 import org.eclipse.lsp4j.debug.ScopesResponse;
@@ -62,6 +64,7 @@ import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 import com.github.cameltooling.dap.internal.model.CamelThread;
+import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
@@ -84,7 +87,12 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<Void> attach(Map<String, Object> args) {
-		connectionManager.attach(args, client);
+		boolean attached = connectionManager.attach(args, client);
+		OutputEventArguments telemetryEvent = new OutputEventArguments();
+		telemetryEvent.setCategory(OutputEventArgumentsCategory.TELEMETRY);
+		telemetryEvent.setOutput("camel.dap.attach");
+		telemetryEvent.setData(new TelemetryEvent("camel.dap.attach", Collections.singletonMap("success", attached)));
+		client.output(telemetryEvent);
 		return CompletableFuture.completedFuture(null);
 	}
 	
