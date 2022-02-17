@@ -92,7 +92,12 @@ public class BacklogDebuggerConnectionManager {
 		}
 	}
 
-	public void attach(Map<String, Object> args, IDebugProtocolClient client) {
+	/**
+	 * @param args
+	 * @param client
+	 * @return if it has been successfully attached
+	 */
+	public boolean attach(Map<String, Object> args, IDebugProtocolClient client) {
 		this.client = client;
 		try {
 			String jmxAddress = DEFAULT_JMX_URI;
@@ -114,12 +119,14 @@ public class BacklogDebuggerConnectionManager {
 				
 				Thread checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints, "Camel DAP - Check Suspended node");
 				checkSuspendedNodeThread.start();
+				return true;
 			} else {
 				LOGGER.warn("No BacklogDebugger found on connection with {}", jmxAddress);
 			}
 		} catch (Exception e) {
 			LOGGER.error("Error trying to attach", e);
 		}
+		return false;
 	}
 
 	private void checkSuspendedBreakpoints() {

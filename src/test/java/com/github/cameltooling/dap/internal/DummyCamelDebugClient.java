@@ -21,6 +21,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+import org.eclipse.lsp4j.debug.OutputEventArguments;
+import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
 import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.ScopesArguments;
 import org.eclipse.lsp4j.debug.ScopesResponse;
@@ -42,6 +44,7 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 	private List<StoppedEventArguments> stoppedEventArguments = new ArrayList<>();
 	private List<StackAndVarOnStopEvent> wholeStackAndVars = new ArrayList<>();
 	private List<ThreadEventArguments> threadEventArgumentss = new ArrayList<>();
+	private List<OutputEventArguments> telemetryEvents = new ArrayList<>();
 	private CamelDebugAdapterServer server;
 
 	public DummyCamelDebugClient(CamelDebugAdapterServer server) {
@@ -105,8 +108,14 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 		} catch (InterruptedException | ExecutionException e) {
 			e.printStackTrace();
 		}
-		
-		
+	}
+	
+	@Override
+	public void output(OutputEventArguments args) {
+		if(OutputEventArgumentsCategory.TELEMETRY.equals(args.getCategory())) {
+			telemetryEvents .add(args);
+		}
+		IDebugProtocolClient.super.output(args);
 	}
 	
 	@Override
@@ -124,6 +133,10 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 
 	public List<ThreadEventArguments> getThreadEventArgumentss() {
 		return threadEventArgumentss;
+	}
+
+	public List<OutputEventArguments> getTelemetryEvents() {
+		return telemetryEvents;
 	}
 
 }

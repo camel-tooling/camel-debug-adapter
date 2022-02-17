@@ -36,6 +36,8 @@ import org.eclipse.lsp4j.debug.TerminatedEventArguments;
 import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.AfterEach;
 
+import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
+
 public abstract class BaseTest {
 
 	protected static final int DEFAULT_VARIABLES_NUMBER = 19;
@@ -71,6 +73,10 @@ public abstract class BaseTest {
 		BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
 		assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
 		assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();
+		assertThat(clientProxy.getTelemetryEvents()).hasSize(1);
+		assertThat(clientProxy.getTelemetryEvents().get(0).getData())
+			.usingRecursiveComparison()
+			.isEqualTo(new TelemetryEvent("camel.dap.attach", Collections.singletonMap("success", true)));
 	}
 
 	protected void waitRouteIsDone(CompletableFuture<Object> asyncSendBody) {
