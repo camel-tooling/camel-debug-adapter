@@ -13,7 +13,7 @@ The Debug Adapter allows to set breakpoints and debug Camel textual DSLs.
 
 The Camel instance to debug must follow these requirements:
 
-- Camel 3.15+
+- Camel 3.16+
 - Have `camel-debug` on the classpath
 - Have JMX enabled
 
@@ -21,7 +21,6 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 
 ## Supported scope
 
-- Local only
 - Attach only
 - Camel DSLs:
   - Java DSL.
@@ -46,6 +45,25 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 
 - `java -jar camel-dap-server-xxx.jar`
 - json parameter to provide on attach:
+
+to use the default JMX url: `service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi/camel`
+
+```json
+{
+"request": "attach"
+}
+```
+
+or the JMX url can be explicitly specified:
+
+```json
+{
+"attach_jmx_url": "xxxxx",
+"request": "attach"
+}
+```
+
+or when running locally, the PID of the Camel application can be provided:
 
 ```json
 {
