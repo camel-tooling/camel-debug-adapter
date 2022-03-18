@@ -39,21 +39,47 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	@Test
 	void testAttachToCamelWithPid() throws Exception {
 		try (CamelContext context = new DefaultCamelContext()) {
-			context.addRoutes(new RouteBuilder() {
-			
-				@Override
-				public void configure() throws Exception {
-					from("direct:test")
-						.log("Log from test");
-				}
-			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
-			initDebugger();
-			attach(server);
-			BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
-			assertThat(connectionManager.getBacklogDebugger().isEnabled()).isTrue();
-			assertThat(connectionManager.getRoutesDOMDocument()).as("Routes instantiated.").isNotNull();
+			startBasicRoute(context);
+			attachWithPid(server);
+			checkConnectionEstablished();
 		}
+	}
+
+	@Test
+	void testAttachToCamelWithDefaultJMX() throws Exception {
+		try (CamelContext context = new DefaultCamelContext()) {
+			startBasicRoute(context);
+			attach(server);
+			checkConnectionEstablished();
+		}
+	}
+	
+	@Test
+	void testAttachToCamelWithProvidedJMXURL() throws Exception {
+		try (CamelContext context = new DefaultCamelContext()) {
+			startBasicRoute(context);
+			attachWithJMXURL(server, BacklogDebuggerConnectionManager.DEFAULT_JMX_URI);
+			checkConnectionEstablished();
+		}
+	}
+	
+	private void checkConnectionEstablished() {
+		BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
+		assertThat(connectionManager.getBacklogDebugger().isEnabled()).isTrue();
+		assertThat(connectionManager.getRoutesDOMDocument()).as("Routes instantiated.").isNotNull();
+	}
+
+	private void startBasicRoute(CamelContext context) throws Exception {
+		context.addRoutes(new RouteBuilder() {
+		
+			@Override
+			public void configure() throws Exception {
+				from("direct:test")
+					.log("Log from test");
+			}
+		});
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		initDebugger();
 	}
 }

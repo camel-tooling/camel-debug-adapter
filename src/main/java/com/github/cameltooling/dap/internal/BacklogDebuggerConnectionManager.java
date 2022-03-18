@@ -61,10 +61,11 @@ public class BacklogDebuggerConnectionManager {
 
 	private static final String OBJECTNAME_BACKLOGDEBUGGER = "org.apache.camel:context=*,type=tracer,name=BacklogDebugger";
 	private static final String OBJECTNAME_CAMELCONTEXT = "org.apache.camel:context=*,type=context,name=*";
-	private static final String DEFAULT_JMX_URI = "service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi";
+	public static final String DEFAULT_JMX_URI = "service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi/camel";
 	private static final Logger LOGGER = LoggerFactory.getLogger(BacklogDebuggerConnectionManager.class);
 
 	public static final String ATTACH_PARAM_PID = "attach_pid";
+	public static final String ATTACH_PARAM_JMX_URL = "attach_jmx_url";
 
 	private JMXConnector jmxConnector;
 	private MBeanServerConnection mbeanConnection;
@@ -100,13 +101,13 @@ public class BacklogDebuggerConnectionManager {
 	public boolean attach(Map<String, Object> args, IDebugProtocolClient client) {
 		this.client = client;
 		try {
-			String jmxAddress = DEFAULT_JMX_URI;
+			String jmxAddress = (String) args.getOrDefault(ATTACH_PARAM_JMX_URL, DEFAULT_JMX_URI);
 			Object pid = args.get(ATTACH_PARAM_PID);
 			if (pid != null) {
 				jmxAddress = getLocalJMXUrl((String) pid);
 			}
 			JMXServiceURL jmxUrl = new JMXServiceURL(jmxAddress);
-			jmxConnector = JMXConnectorFactory.connect(jmxUrl);
+			jmxConnector = connect(jmxUrl);
 			mbeanConnection = jmxConnector.getMBeanServerConnection();
 			ObjectName objectName = new ObjectName(OBJECTNAME_BACKLOGDEBUGGER);
 			Set<ObjectName> names = mbeanConnection.queryNames(objectName, null);
@@ -127,6 +128,26 @@ public class BacklogDebuggerConnectionManager {
 			LOGGER.error("Error trying to attach", e);
 		}
 		return false;
+	}
+
+	private JMXConnector connect(JMXServiceURL jmxUrl) throws IOException, InterruptedException {
+		JMXConnector connector = null;
+		int tries = 0;
+		int maxTries = 10;
+		int delayBetweenTries = 200;
+		while (connector == null && tries < maxTries) {
+			tries++;
+			try {
+				connector = JMXConnectorFactory.connect(jmxUrl);
+			} catch (Exception e) {
+				if(tries >= maxTries) {
+					throw e;
+				}
+				Thread.sleep(delayBetweenTries);
+			}
+			
+		}
+		return connector;
 	}
 
 	private void checkSuspendedBreakpoints() {

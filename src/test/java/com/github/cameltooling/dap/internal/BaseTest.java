@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
@@ -68,8 +69,27 @@ public abstract class BaseTest {
 			});
 	}
 
+	protected void attachWithPid(CamelDebugAdapterServer server) {
+		Map<String, Object> paramMap = Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid()));
+		attach(server, paramMap);
+	}
+	
+	protected void attachWithJMXURL(CamelDebugAdapterServer server, String jmxUrl) {
+		Map<String, Object> paramMap = Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, jmxUrl);
+		attach(server, paramMap);
+	}
+	
+	/**
+	 * It is attaching with no parameter provided. So using default JMX url.
+	 * 
+	 * @param server
+	 */
 	protected void attach(CamelDebugAdapterServer server) {
-		server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid())));
+		attach(server, Collections.emptyMap());
+	}
+
+	protected void attach(CamelDebugAdapterServer server, Map<String, Object> paramMap) {
+		server.attach(paramMap);
 		BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
 		assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
 		assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();
