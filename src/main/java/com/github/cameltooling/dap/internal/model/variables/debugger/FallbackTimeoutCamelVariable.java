@@ -14,27 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.cameltooling.dap.internal.model;
-
-import java.util.HashSet;
-import java.util.Set;
+package com.github.cameltooling.dap.internal.model.variables.debugger;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
-import org.eclipse.lsp4j.debug.Variable;
 
-import com.github.cameltooling.dap.internal.IdUtils;
+import com.github.cameltooling.dap.internal.model.variables.CamelVariable;
 
-public class CamelEndpointScope extends CamelScope {
-	
-	public CamelEndpointScope(CamelStackFrame stackframe) {
-		super("Endpoint", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Endpoint@" + stackframe.getName()).hashCode()));
+public class FallbackTimeoutCamelVariable extends CamelVariable {
+
+	public static final String NAME = "Fallback timeout";
+
+	public FallbackTimeoutCamelVariable(ManagedBacklogDebuggerMBean debugger) {
+		setName(NAME);
+		setValue(Long.toString(debugger.getFallbackTimeout()));
 	}
-	
-	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
-		Set<Variable> variables = new HashSet<>();
-		if (variablesReference == getVariablesReference()) {
-			variables.add(createVariable("Name", getName()));
-		}
-		return variables;
+
+	@Override
+	public void updateValue(ManagedBacklogDebuggerMBean backlogDebugger, String value) {
+		backlogDebugger.setFallbackTimeout(Long.valueOf(value));
+		setValue(value);
 	}
+
 }
