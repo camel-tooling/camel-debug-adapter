@@ -14,33 +14,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.cameltooling.dap.internal.model;
+package com.github.cameltooling.dap.internal.model.scopes;
 
 import java.util.HashSet;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
+import org.eclipse.lsp4j.debug.SetVariableArguments;
+import org.eclipse.lsp4j.debug.SetVariableResponse;
 import org.eclipse.lsp4j.debug.Variable;
 
 import com.github.cameltooling.dap.internal.IdUtils;
+import com.github.cameltooling.dap.internal.model.CamelScope;
+import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 
-public class CamelDebuggerScope extends CamelScope {
-
-	public CamelDebuggerScope(CamelStackFrame stackframe) {
-		super("Debugger", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Debugger@" + stackframe.getName()).hashCode()));
+public class CamelEndpointScope extends CamelScope {
+	
+	public CamelEndpointScope(CamelStackFrame stackframe) {
+		super("Endpoint", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Endpoint@" + stackframe.getName()).hashCode()));
 	}
 	
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
-		if(variablesReference == getVariablesReference()) {
-			variables.add(createVariable("Logging level", debugger.getLoggingLevel()));
-			variables.add(createVariable("Max chars for body", Integer.toString(debugger.getBodyMaxChars())));
-			variables.add(createVariable("Debug counter", Long.toString(debugger.getDebugCounter())));
-			variables.add(createVariable("Fallback timeout", Long.toString(debugger.getFallbackTimeout())));
-			variables.add(createVariable("Body include files", Boolean.toString(debugger.isBodyIncludeFiles())));
-			variables.add(createVariable("Body include streams", Boolean.toString(debugger.isBodyIncludeStreams())));
+		if (variablesReference == getVariablesReference()) {
+			variables.add(createVariable("Name", getName()));
 		}
 		return variables;
 	}
 
+	@Override
+	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger) {
+		if (args.getVariablesReference() == getVariablesReference()) {
+			throw new UnsupportedOperationException("The endpoint name cannot be updated.");
+		}
+		return null;
+	}
 }

@@ -1,0 +1,177 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package com.github.cameltooling.dap.internal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.concurrent.CompletableFuture;
+
+import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.impl.DefaultCamelContext;
+import org.apache.camel.impl.engine.DefaultProducerTemplate;
+import org.eclipse.lsp4j.debug.ContinueArguments;
+import org.eclipse.lsp4j.debug.Scope;
+import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
+import org.eclipse.lsp4j.debug.SetVariableArguments;
+import org.eclipse.lsp4j.debug.SetVariableResponse;
+import org.eclipse.lsp4j.debug.StoppedEventArguments;
+import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import com.github.cameltooling.dap.internal.model.scopes.CamelDebuggerScope;
+import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeFilesCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeStreamsCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.DebugCounterCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.FallbackTimeoutCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.LoggingLevelCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsForBodyCamelVariable;
+
+class UpdateDebuggerVariableValueTest extends BaseTest {
+	
+	private DefaultCamelContext context;
+	private Scope debuggerScope;
+	private DefaultProducerTemplate producerTemplate;
+	private CompletableFuture<Object> asyncSendBody;
+
+	@BeforeEach
+	void beforeEach() throws Exception {
+		context = new DefaultCamelContext();
+		
+		String startEndpointUri = "direct:testResume";
+		context.addRoutes(new RouteBuilder() {
+		
+			@Override
+			public void configure() throws Exception {
+				from(startEndpointUri)
+					.log("Log from test");  // XXX-breakpoint-XXX
+			}
+		});
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		initDebugger();
+		attach(server);
+		SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX");
+		
+		server.setBreakpoints(setBreakpointsArguments).get();
+		
+		producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
+		producerTemplate.start();
+		
+		asyncSendBody = producerTemplate.asyncSendBody(startEndpointUri, "a body");
+		
+		waitBreakpointNotification(1);
+		StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
+		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
+		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
+		assertThat(asyncSendBody.isDone()).isFalse();
+		awaitAllVariablesFilled(0);
+		
+		debuggerScope = clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelDebuggerScope.NAME.equals(scope.getName())).findAny().get();
+	}
+	
+	@AfterEach
+	void afterEach() {
+		try {
+			server.continue_(new ContinueArguments());
+			waitRouteIsDone(asyncSendBody);
+			producerTemplate.stop();
+		} finally {
+			context.stop();
+		}
+	}
+
+	@Test
+	void updateLoggingLevel() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(LoggingLevelCamelVariable.NAME);
+		args.setValue("TRACE");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("TRACE");
+		assertThat(response.getValue()).isEqualTo(server.getConnectionManager().getBacklogDebugger().getLoggingLevel());
+	}
+	
+	@Test
+	void updateDebugCounter() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(DebugCounterCamelVariable.NAME);
+		args.setValue("0");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("0");
+		assertThat(Long.valueOf(response.getValue())).isEqualTo(server.getConnectionManager().getBacklogDebugger().getDebugCounter());
+	}
+	
+	@Test
+	void updateBodyIncludeFiles() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(BodyIncludeFilesCamelVariable.NAME);
+		args.setValue("true");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("true");
+		assertThat(Boolean.valueOf(response.getValue())).isEqualTo(server.getConnectionManager().getBacklogDebugger().isBodyIncludeFiles());
+	}
+	
+	@Test
+	void updateBodyIncludeStreams() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(BodyIncludeStreamsCamelVariable.NAME);
+		args.setValue("true");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("true");
+		assertThat(Boolean.valueOf(response.getValue())).isEqualTo(server.getConnectionManager().getBacklogDebugger().isBodyIncludeStreams());
+	}
+	
+	@Test
+	void updateFallBackTimeout() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(FallbackTimeoutCamelVariable.NAME);
+		args.setValue("45");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("45");
+		assertThat(Long.valueOf(response.getValue())).isEqualTo(server.getConnectionManager().getBacklogDebugger().getFallbackTimeout());
+	}
+	
+	@Test
+	void updatemaxBodyChars() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(MaxCharsForBodyCamelVariable.NAME);
+		args.setValue("46");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("46");
+		assertThat(Long.valueOf(response.getValue())).isEqualTo(server.getConnectionManager().getBacklogDebugger().getBodyMaxChars());
+	}
+	
+}

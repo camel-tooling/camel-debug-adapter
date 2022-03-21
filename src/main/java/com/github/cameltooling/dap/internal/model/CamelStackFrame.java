@@ -24,6 +24,12 @@ import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.StackFrame;
 import org.eclipse.lsp4j.debug.Variable;
 
+import com.github.cameltooling.dap.internal.model.scopes.CamelDebuggerScope;
+import com.github.cameltooling.dap.internal.model.scopes.CamelEndpointScope;
+import com.github.cameltooling.dap.internal.model.scopes.CamelExchangeScope;
+import com.github.cameltooling.dap.internal.model.scopes.CamelMessageScope;
+import com.github.cameltooling.dap.internal.model.scopes.CamelProcessorScope;
+
 public class CamelStackFrame extends StackFrame {
 
 	private Set<CamelScope> scopes = new HashSet<>();
@@ -47,10 +53,14 @@ public class CamelStackFrame extends StackFrame {
 
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
-		for (CamelScope camelScope : scopes) {
+		for (CamelScope camelScope : getScopes()) {
 			variables.addAll(camelScope.createVariables(variablesReference, debugger));
 		}
 		return variables;
+	}
+
+	public Set<CamelScope> getScopes() {
+		return scopes;
 	}
 
 }

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.cameltooling.dap.internal.model;
+package com.github.cameltooling.dap.internal.model.scopes;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -23,9 +23,13 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
+import org.eclipse.lsp4j.debug.SetVariableArguments;
+import org.eclipse.lsp4j.debug.SetVariableResponse;
 import org.eclipse.lsp4j.debug.Variable;
 
 import com.github.cameltooling.dap.internal.IdUtils;
+import com.github.cameltooling.dap.internal.model.CamelScope;
+import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.ExchangeProperty;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
@@ -65,6 +69,14 @@ public class CamelExchangeScope extends CamelScope {
 			}
 		}
 		return variables;
+	}
+
+	@Override
+	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger) {
+		if (getVariablesReference() == args.getVariablesReference()) {
+			throw new UnsupportedOperationException("Not yet supported");
+		}
+		return null;
 	}
 
 }

@@ -21,6 +21,8 @@ import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.eclipse.lsp4j.debug.Scope;
+import org.eclipse.lsp4j.debug.SetVariableArguments;
+import org.eclipse.lsp4j.debug.SetVariableResponse;
 import org.eclipse.lsp4j.debug.Variable;
 
 public abstract class CamelScope extends Scope {
@@ -37,7 +39,7 @@ public abstract class CamelScope extends Scope {
 		return breakpointId;
 	}
 	
-	public abstract Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger);
+	public abstract Set<? extends Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger);
 	
 	protected Variable createVariable(String variableName, String variableValue) {
 		Variable variable = new Variable();
@@ -59,5 +61,7 @@ public abstract class CamelScope extends Scope {
 	public int hashCode() {
 		return Objects.hash(super.hashCode(), breakpointId);
 	}
+
+	public abstract SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger);
 
 }

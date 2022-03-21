@@ -26,6 +26,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.Breakpoint;
@@ -36,6 +37,13 @@ import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.Test;
+
+import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeFilesCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeStreamsCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.DebugCounterCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.FallbackTimeoutCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.LoggingLevelCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsForBodyCamelVariable;
 
 abstract class BasicDebugFlowTest extends BaseTest {
 
@@ -91,16 +99,17 @@ abstract class BasicDebugFlowTest extends BaseTest {
 			 .until(() -> {
 				 return stackAndData.getVariables().size() == 23;
 			 });
+			ManagedBacklogDebuggerMBean debugger = server.getConnectionManager().getBacklogDebugger();
 			List<Variable> variables = stackAndData.getVariables();
 			assertThat(variables)
 				.contains(
 						createVariable("Body", body),
-						createVariable("Logging level","INFO"),
-						createVariable("Max chars for body", "131072"),
-						createVariable("Fallback timeout", "300"),
-						createVariable("Debug counter", "1"),
-						createVariable("Body include files", "true"),
-						createVariable("Body include streams", "false"),
+						new LoggingLevelCamelVariable(debugger),
+						new MaxCharsForBodyCamelVariable(debugger),
+						new FallbackTimeoutCamelVariable(debugger),
+						new DebugCounterCamelVariable(debugger),
+						new BodyIncludeFilesCamelVariable(debugger),
+						new BodyIncludeStreamsCamelVariable(debugger),
 						createVariable("To node", logEndpointId),
 						createVariable("Route ID", routeId),
 						createVariable("header1", "value of header 1"),

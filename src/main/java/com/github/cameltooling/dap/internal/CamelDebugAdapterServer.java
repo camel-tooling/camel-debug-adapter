@@ -43,6 +43,8 @@ import org.eclipse.lsp4j.debug.ScopesArguments;
 import org.eclipse.lsp4j.debug.ScopesResponse;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse;
+import org.eclipse.lsp4j.debug.SetVariableArguments;
+import org.eclipse.lsp4j.debug.SetVariableResponse;
 import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.SourceBreakpoint;
 import org.eclipse.lsp4j.debug.StackFrame;
@@ -82,7 +84,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
 		client.initialized();
-		return CompletableFuture.completedFuture(new Capabilities());
+		Capabilities capabilities = new Capabilities();
+		capabilities.setSupportsSetVariable(Boolean.TRUE);
+		return CompletableFuture.completedFuture(capabilities);
 	}
 	
 	@Override
@@ -240,6 +244,19 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<Void> disconnect(DisconnectArguments args) {
 		connectionManager.terminate();
+		return CompletableFuture.completedFuture(null);
+	}
+	
+	@Override
+	public CompletableFuture<SetVariableResponse> setVariable(SetVariableArguments args) {
+		for(CamelThread thread : connectionManager.getCamelThreads()) {
+			for(CamelScope scope : thread.getStackFrame().getScopes()) {
+				SetVariableResponse response = scope.setVariableIfInScope(args, connectionManager.getBacklogDebugger());
+				if (response != null) {
+					return CompletableFuture.completedFuture(response);
+				}
+			}
+		}
 		return CompletableFuture.completedFuture(null);
 	}
 
