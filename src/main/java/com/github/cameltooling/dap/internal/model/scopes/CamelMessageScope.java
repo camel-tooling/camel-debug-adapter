@@ -30,16 +30,19 @@ import org.eclipse.lsp4j.debug.Variable;
 import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
+import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.Header;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 public class CamelMessageScope extends CamelScope {
 	
+	public static final String NAME = "Message";
 	private Map<Integer, List<Header>> headersVariableReferenceToHeaders = new HashMap<>();
+	private MessageBodyCamelVariable messageBody;
 
 	public CamelMessageScope(CamelStackFrame stackframe) {
-		super("Message", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Message@" + stackframe.getName()).hashCode()));
+		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Message@" + stackframe.getName()).hashCode()));
 	}
 	
 	@Override
@@ -51,7 +54,8 @@ public class CamelMessageScope extends CamelScope {
 			if(eventMessage != null) {
 				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
 				variables.add(createVariable("UID", Long.toString(eventMessage.getUid())));
-				variables.add(createVariable("Body", eventMessage.getMessage().getBody()));
+				messageBody = new MessageBodyCamelVariable(getBreakpointId(), eventMessage.getMessage().getBody());
+				variables.add(messageBody);
 				Variable headersVariable = new Variable();
 				headersVariable.setName("Headers");
 				headersVariable.setValue("");
@@ -72,9 +76,16 @@ public class CamelMessageScope extends CamelScope {
 	}
 	
 	@Override
-	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger) {
+	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean debugger) {
 		if (getVariablesReference() == args.getVariablesReference()) {
-			throw new UnsupportedOperationException("Not yet supported");
+			if (args.getName().equals(messageBody.getName())) {
+				messageBody.updateValue(debugger, args.getValue());
+				SetVariableResponse response = new SetVariableResponse();
+				response.setValue(args.getValue());
+				return response;
+			} else {
+				throw new UnsupportedOperationException("Not yet supported");
+			}
 		}
 		return null;
 	}

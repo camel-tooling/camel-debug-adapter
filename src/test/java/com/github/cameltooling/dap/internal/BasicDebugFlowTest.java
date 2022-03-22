@@ -44,6 +44,7 @@ import com.github.cameltooling.dap.internal.model.variables.debugger.DebugCounte
 import com.github.cameltooling.dap.internal.model.variables.debugger.FallbackTimeoutCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.LoggingLevelCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsForBodyCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
 
 abstract class BasicDebugFlowTest extends BaseTest {
 
@@ -103,7 +104,7 @@ abstract class BasicDebugFlowTest extends BaseTest {
 			List<Variable> variables = stackAndData.getVariables();
 			assertThat(variables)
 				.contains(
-						createVariable("Body", body),
+						new MessageBodyCamelVariable(logEndpointId, body),
 						new LoggingLevelCamelVariable(debugger),
 						new MaxCharsForBodyCamelVariable(debugger),
 						new FallbackTimeoutCamelVariable(debugger),

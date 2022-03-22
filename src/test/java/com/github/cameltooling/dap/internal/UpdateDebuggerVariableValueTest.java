@@ -24,6 +24,7 @@ import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.ContinueArguments;
+import org.eclipse.lsp4j.debug.NextArguments;
 import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetVariableArguments;
@@ -35,15 +36,21 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.github.cameltooling.dap.internal.model.scopes.CamelDebuggerScope;
+import com.github.cameltooling.dap.internal.model.scopes.CamelMessageScope;
 import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeFilesCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeStreamsCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.DebugCounterCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.FallbackTimeoutCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.LoggingLevelCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsForBodyCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
+import com.github.cameltooling.dap.internal.types.EventMessage;
+import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 class UpdateDebuggerVariableValueTest extends BaseTest {
 	
+	private static final String LOG_ID = "log-id";
+	protected static final String SECOND_LOG_ID = "second-log-id";
 	private DefaultCamelContext context;
 	private Scope debuggerScope;
 	private DefaultProducerTemplate producerTemplate;
@@ -59,7 +66,8 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 			@Override
 			public void configure() throws Exception {
 				from(startEndpointUri)
-					.log("Log from test");  // XXX-breakpoint-XXX
+					.log("Log from test").id(LOG_ID) // XXX-breakpoint-XXX
+					.log("Another log").id(SECOND_LOG_ID); 
 			}
 		});
 		context.start();
@@ -172,6 +180,30 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 
 		assertThat(response.getValue()).isEqualTo("46");
 		assertThat(Long.valueOf(response.getValue())).isEqualTo(server.getConnectionManager().getBacklogDebugger().getBodyMaxChars());
+	}
+	
+	@Test
+	void updateBody() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(MessageBodyCamelVariable.NAME);
+		args.setValue("an updated body");
+		Scope messageScope = clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelMessageScope.NAME.equals(scope.getName())).findAny().get();
+		args.setVariablesReference(messageScope.getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("an updated body");
+		
+		// Checking on the next value because the existing TracedMessage are not updated, so to check the value need to go to the next endpoint.
+		NextArguments nextArgs = new NextArguments();
+		nextArgs.setThreadId(1);
+		server.next(nextArgs);
+		
+		waitBreakpointNotification(2);
+		
+		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, false);
+		EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(messagesAsXml);
+		assertThat(response.getValue()).isEqualTo(eventMessage.getMessage().getBody());
 	}
 	
 }
