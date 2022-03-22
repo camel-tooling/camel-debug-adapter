@@ -16,10 +16,7 @@
  */
 package com.github.cameltooling.dap.internal.model.scopes;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
@@ -31,15 +28,15 @@ import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.message.MessageHeadersVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
-import com.github.cameltooling.dap.internal.types.Header;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 public class CamelMessageScope extends CamelScope {
 	
 	public static final String NAME = "Message";
-	private Map<Integer, List<Header>> headersVariableReferenceToHeaders = new HashMap<>();
 	private MessageBodyCamelVariable messageBody;
+	private MessageHeadersVariable headersVariable;
 
 	public CamelMessageScope(CamelStackFrame stackframe) {
 		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Message@" + stackframe.getName()).hashCode()));
@@ -56,20 +53,12 @@ public class CamelMessageScope extends CamelScope {
 				variables.add(createVariable("UID", Long.toString(eventMessage.getUid())));
 				messageBody = new MessageBodyCamelVariable(getBreakpointId(), eventMessage.getMessage().getBody());
 				variables.add(messageBody);
-				Variable headersVariable = new Variable();
-				headersVariable.setName("Headers");
-				headersVariable.setValue("");
-				int headerVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference+"@Headers@").hashCode());
-				headersVariableReferenceToHeaders.put(headerVarRefId, eventMessage.getMessage().getHeaders());
-				headersVariable.setVariablesReference(headerVarRefId);
+				headersVariable = new MessageHeadersVariable(variablesReference, eventMessage.getMessage().getHeaders(), getBreakpointId());
 				variables.add(headersVariable);
 			}
 		} else {
-			List<Header> headers = headersVariableReferenceToHeaders.get(variablesReference);
-			if(headers != null) {
-				for (Header header : headers) {
-					variables.add(createVariable(header.getKey(), header.getValue()));
-				}
+			if (headersVariable != null && variablesReference == headersVariable.getVariablesReference()) {
+				variables.addAll(headersVariable.createVariables());
 			}
 		}
 		return variables;
@@ -84,10 +73,15 @@ public class CamelMessageScope extends CamelScope {
 				response.setValue(args.getValue());
 				return response;
 			} else {
-				throw new UnsupportedOperationException("Not yet supported");
+				throw new UnsupportedOperationException("Not supported");
 			}
+		} else {
+			return headersVariable.setVariableIfInScope(args, debugger);
 		}
-		return null;
+	}
+
+	public MessageHeadersVariable getHeadersVariable() {
+		return headersVariable;
 	}
 
 }

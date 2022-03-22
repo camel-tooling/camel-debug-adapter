@@ -39,6 +39,8 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 - Update values of:
   - Common variables which are grouped in `Debugger` scope
   - Message body
+  - Message header (for String types)
+  
 
 ## How to use it
 

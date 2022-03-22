@@ -51,6 +51,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 	
 	private static final String LOG_ID = "log-id";
 	protected static final String SECOND_LOG_ID = "second-log-id";
+	private static final int NUMBER_OF_HEADER = 1;
 	private DefaultCamelContext context;
 	private Scope debuggerScope;
 	private DefaultProducerTemplate producerTemplate;
@@ -66,6 +67,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 			@Override
 			public void configure() throws Exception {
 				from(startEndpointUri)
+					.setHeader("header1", constant("initial header value"))
 					.log("Log from test").id(LOG_ID) // XXX-breakpoint-XXX
 					.log("Another log").id(SECOND_LOG_ID); 
 			}
@@ -88,7 +90,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 		assertThat(asyncSendBody.isDone()).isFalse();
-		awaitAllVariablesFilled(0);
+		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER);
 		
 		debuggerScope = clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelDebuggerScope.NAME.equals(scope.getName())).findAny().get();
 	}
@@ -194,6 +196,27 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 
 		assertThat(response.getValue()).isEqualTo("an updated body");
 		
+		EventMessage eventMessage = getMessageStateOnNextStep();
+		assertThat(response.getValue()).isEqualTo(eventMessage.getMessage().getBody());
+	}
+	
+	@Test
+	void updateHeader() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName("header1");
+		args.setValue("an updated header");
+		CamelMessageScope messageScope = (CamelMessageScope) clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelMessageScope.NAME.equals(scope.getName())).findAny().get();
+		args.setVariablesReference(messageScope.getHeadersVariable().getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("an updated header");
+		
+		EventMessage eventMessage = getMessageStateOnNextStep();
+		assertThat(response.getValue()).isEqualTo(eventMessage.getMessage().getHeaders().get(0).getValue());
+	}
+	
+	private EventMessage getMessageStateOnNextStep() {
 		// Checking on the next value because the existing TracedMessage are not updated, so to check the value need to go to the next endpoint.
 		NextArguments nextArgs = new NextArguments();
 		nextArgs.setThreadId(1);
@@ -203,7 +226,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		
 		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, false);
 		EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(messagesAsXml);
-		assertThat(response.getValue()).isEqualTo(eventMessage.getMessage().getBody());
+		return eventMessage;
 	}
 	
 }
