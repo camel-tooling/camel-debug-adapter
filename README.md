@@ -36,7 +36,9 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 - Specific client provided:
   - on [Eclipse Desktop](https://github.com/camel-tooling/camel-dap-client-eclipse), install from [this update site](https://camel-tooling.github.io/camel-dap-client-eclipse/)
   - on [VS Code](https://github.com/camel-tooling/camel-dap-client-vscode), snapshot binary available [here](https://download.jboss.org/jbosstools/vscode/snapshots/vscode-debug-adapter-apache-camel/)
-- Update value of common variables which are grouped in `Debugger` scope
+- Update values of:
+  - Common variables which are grouped in `Debugger` scope
+  - Message body
 
 ## How to use it
 
