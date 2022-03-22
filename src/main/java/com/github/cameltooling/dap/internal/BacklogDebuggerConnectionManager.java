@@ -93,8 +93,8 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	/**
-	 * @param args
-	 * @param client
+	 * @param args a Map of parameter. Currently supported: attach_pid
+	 * @param client The debug adapter client proxy
 	 * @return if it has been successfully attached
 	 */
 	public boolean attach(Map<String, Object> args, IDebugProtocolClient client) {
