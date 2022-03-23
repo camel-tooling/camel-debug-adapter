@@ -223,6 +223,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		server.next(nextArgs);
 		
 		waitBreakpointNotification(2);
+		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER);
 		
 		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, false);
 		EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(messagesAsXml);
