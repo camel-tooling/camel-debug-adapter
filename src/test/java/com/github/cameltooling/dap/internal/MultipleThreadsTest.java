@@ -64,6 +64,8 @@ class MultipleThreadsTest extends BaseTest {
 			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(startEndpointUri2, "a body 2");
 			
 			waitBreakpointNotification(2);
+			awaitAllVariablesFilled(0);
+			awaitAllVariablesFilled(1, 2*DEFAULT_VARIABLES_NUMBER);
 			StoppedEventArguments stoppedEventArgument1 = clientProxy.getStoppedEventArguments().get(0);
 			assertThat(stoppedEventArgument1.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 			assertThat(clientProxy.getThreadEventArgumentss()).hasSize(2);
