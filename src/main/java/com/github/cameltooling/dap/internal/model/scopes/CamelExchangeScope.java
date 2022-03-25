@@ -16,10 +16,7 @@
  */
 package com.github.cameltooling.dap.internal.model.scopes;
 
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
@@ -30,16 +27,17 @@ import org.eclipse.lsp4j.debug.Variable;
 import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
+import com.github.cameltooling.dap.internal.model.variables.exchange.ExchangePropertiesVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
-import com.github.cameltooling.dap.internal.types.ExchangeProperty;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 public class CamelExchangeScope extends CamelScope {
 	
-	private Map<Integer, List<ExchangeProperty>> variableReferenceToExchangeProperties = new HashMap<>();
+	public static final String NAME = "Exchange";
+	private ExchangePropertiesVariable exchangeVariable;
 
 	public CamelExchangeScope(CamelStackFrame stackframe) {
-		super("Exchange", stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Exchange@" + stackframe.getName()).hashCode()));
+		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Exchange@" + stackframe.getName()).hashCode()));
 	}
 
 	@Override
@@ -52,20 +50,12 @@ public class CamelExchangeScope extends CamelScope {
 				variables.add(createVariable("ID", eventMessage.getExchangeId()));
 				variables.add(createVariable("To node", eventMessage.getToNode()));
 				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
-				Variable exchangeVariable = new Variable();
-				exchangeVariable.setName("Properties");
-				exchangeVariable.setValue("");
-				int exchangeVarRefId = IdUtils.getPositiveIntFromHashCode((variablesReference + "@ExchangeProperties@").hashCode());
-				variableReferenceToExchangeProperties.put(exchangeVarRefId, eventMessage.getExchangeProperties());
-				exchangeVariable.setVariablesReference(exchangeVarRefId);
+				exchangeVariable = new ExchangePropertiesVariable(variablesReference, eventMessage.getExchangeProperties(), getBreakpointId());
 				variables.add(exchangeVariable);
 			}
 		} else {
-			List<ExchangeProperty> exchangeProperties = variableReferenceToExchangeProperties.get(variablesReference);
-			if (exchangeProperties != null) {
-				for (ExchangeProperty exchangeProperty : exchangeProperties) {
-					variables.add(createVariable(exchangeProperty.getName(), exchangeProperty.getContent()));
-				}
+			if (exchangeVariable != null && variablesReference == exchangeVariable.getVariablesReference()) {
+				variables.addAll(exchangeVariable.createVariables());
 			}
 		}
 		return variables;
@@ -74,9 +64,13 @@ public class CamelExchangeScope extends CamelScope {
 	@Override
 	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger) {
 		if (getVariablesReference() == args.getVariablesReference()) {
-			throw new UnsupportedOperationException("Not yet supported");
+			throw new UnsupportedOperationException("Not supported");
 		}
-		return null;
+		return exchangeVariable.setVariableIfInScope(args, backlogDebugger);
+	}
+
+	public ExchangePropertiesVariable getExchangePropertiesVariable() {
+		return exchangeVariable;
 	}
 
 }

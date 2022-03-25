@@ -36,6 +36,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.github.cameltooling.dap.internal.model.scopes.CamelDebuggerScope;
+import com.github.cameltooling.dap.internal.model.scopes.CamelExchangeScope;
 import com.github.cameltooling.dap.internal.model.scopes.CamelMessageScope;
 import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeFilesCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeStreamsCamelVariable;
@@ -52,6 +53,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 	private static final String LOG_ID = "log-id";
 	protected static final String SECOND_LOG_ID = "second-log-id";
 	private static final int NUMBER_OF_HEADER = 1;
+	private static final int NUMBER_OF_EXCHANGE_PROPERTY = 1;
 	private DefaultCamelContext context;
 	private Scope debuggerScope;
 	private DefaultProducerTemplate producerTemplate;
@@ -68,6 +70,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 			public void configure() throws Exception {
 				from(startEndpointUri)
 					.setHeader("header1", constant("initial header value"))
+					.setProperty("property1", constant("initial exchange property value"))
 					.log("Log from test").id(LOG_ID) // XXX-breakpoint-XXX
 					.log("Another log").id(SECOND_LOG_ID); 
 			}
@@ -90,7 +93,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 		assertThat(asyncSendBody.isDone()).isFalse();
-		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER);
+		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY);
 		
 		debuggerScope = clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelDebuggerScope.NAME.equals(scope.getName())).findAny().get();
 	}
@@ -216,6 +219,24 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		assertThat(response.getValue()).isEqualTo(eventMessage.getMessage().getHeaders().get(0).getValue());
 	}
 	
+	@Test
+	void updateExchangeProperty() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName("property1");
+		args.setValue("an updated exchange property");
+		CamelExchangeScope exchangeScope = (CamelExchangeScope) clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelExchangeScope.NAME.equals(scope.getName())).findAny().get();
+		args.setVariablesReference(exchangeScope.getExchangePropertiesVariable().getVariablesReference());
+
+		
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("an updated exchange property");
+		
+		EventMessage eventMessage = getMessageStateOnNextStep();
+		assertThat(response.getValue()).isEqualTo(eventMessage.getExchangeProperties().get(0).getContent());
+		System.out.println(eventMessage.getExchangeProperties().get(0).getContent());
+	}
+	
 	private EventMessage getMessageStateOnNextStep() {
 		// Checking on the next value because the existing TracedMessage are not updated, so to check the value need to go to the next endpoint.
 		NextArguments nextArgs = new NextArguments();
@@ -223,9 +244,9 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		server.next(nextArgs);
 		
 		waitBreakpointNotification(2);
-		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER);
+		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY);
 		
-		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, false);
+		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, true);
 		EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(messagesAsXml);
 		return eventMessage;
 	}
