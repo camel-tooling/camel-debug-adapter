@@ -251,9 +251,17 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<SetVariableResponse> setVariable(SetVariableArguments args) {
 		for(CamelThread thread : connectionManager.getCamelThreads()) {
 			for(CamelScope scope : thread.getStackFrame().getScopes()) {
-				SetVariableResponse response = scope.setVariableIfInScope(args, connectionManager.getBacklogDebugger());
-				if (response != null) {
-					return CompletableFuture.completedFuture(response);
+				try {
+					SetVariableResponse response = scope.setVariableIfInScope(args, connectionManager.getBacklogDebugger());
+					if (response != null) {
+						return CompletableFuture.completedFuture(response);
+					}
+				} catch (Exception ex) {
+					OutputEventArguments eventToAlertUser = new OutputEventArguments();
+					eventToAlertUser.setCategory(OutputEventArgumentsCategory.STDERR);
+					eventToAlertUser.setOutput("Cannot set variable " + args.getName() + ": "+ ex.getClass().getCanonicalName() + ": " + ex.getMessage());
+					client.output(eventToAlertUser);
+					throw ex;
 				}
 			}
 		}
