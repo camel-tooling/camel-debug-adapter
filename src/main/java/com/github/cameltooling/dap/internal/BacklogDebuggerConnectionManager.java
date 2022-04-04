@@ -130,7 +130,7 @@ public class BacklogDebuggerConnectionManager {
 		return false;
 	}
 
-	private JMXConnector connect(JMXServiceURL jmxUrl) throws IOException, InterruptedException {
+	private JMXConnector connect(JMXServiceURL jmxUrl) throws IOException {
 		JMXConnector connector = null;
 		int tries = 0;
 		int maxTries = 10;
@@ -143,9 +143,12 @@ public class BacklogDebuggerConnectionManager {
 				if(tries >= maxTries) {
 					throw e;
 				}
-				Thread.sleep(delayBetweenTries);
+				try {
+					Thread.sleep(delayBetweenTries);
+				} catch (InterruptedException e1) {
+					Thread.currentThread().interrupt();
+				}
 			}
-			
 		}
 		return connector;
 	}
