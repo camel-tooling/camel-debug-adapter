@@ -45,6 +45,7 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 	private List<StackAndVarOnStopEvent> wholeStackAndVars = new ArrayList<>();
 	private List<ThreadEventArguments> threadEventArgumentss = new ArrayList<>();
 	private List<OutputEventArguments> telemetryEvents = new ArrayList<>();
+	private List<OutputEventArguments> outputEventArguments = new ArrayList<>();
 	private CamelDebugAdapterServer server;
 
 	public DummyCamelDebugClient(CamelDebugAdapterServer server) {
@@ -114,6 +115,8 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 	public void output(OutputEventArguments args) {
 		if(OutputEventArgumentsCategory.TELEMETRY.equals(args.getCategory())) {
 			telemetryEvents .add(args);
+		} else {
+			outputEventArguments.add(args);
 		}
 		IDebugProtocolClient.super.output(args);
 	}
@@ -137,6 +140,10 @@ public class DummyCamelDebugClient implements IDebugProtocolClient {
 
 	public List<OutputEventArguments> getTelemetryEvents() {
 		return telemetryEvents;
+	}
+
+	public List<OutputEventArguments> getOutputEventArguments() {
+		return outputEventArguments;
 	}
 
 }

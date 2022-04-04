@@ -17,6 +17,7 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -25,6 +26,8 @@ import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.NextArguments;
+import org.eclipse.lsp4j.debug.OutputEventArguments;
+import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
 import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetVariableArguments;
@@ -234,7 +237,24 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		
 		EventMessage eventMessage = getMessageStateOnNextStep();
 		assertThat(response.getValue()).isEqualTo(eventMessage.getExchangeProperties().get(0).getContent());
-		System.out.println(eventMessage.getExchangeProperties().get(0).getContent());
+	}
+	
+	@Test
+	void updateToAnInvalidValueReportsAnOutputError() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName(FallbackTimeoutCamelVariable.NAME);
+		args.setValue("invalid value");
+		args.setVariablesReference(debuggerScope.getVariablesReference());
+
+		assertThrows(NumberFormatException.class,
+			() -> {
+				server.setVariable(args);
+			}
+		);
+
+		OutputEventArguments outputEventArguments = clientProxy.getOutputEventArguments().get(0);
+		assertThat(outputEventArguments.getCategory()).isEqualTo(OutputEventArgumentsCategory.STDERR);
+		assertThat(outputEventArguments.getOutput()).contains("Cannot set variable "+ FallbackTimeoutCamelVariable.NAME);
 	}
 	
 	private EventMessage getMessageStateOnNextStep() {
