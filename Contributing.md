@@ -35,3 +35,14 @@ To test with the Client integration of Eclipse IDE:
   ```
   - Click `Debug`
 - You can now set breakpoints in textual Camel route definition and Camel Debug Adapter project
+
+# How to release
+
+- Update pom to not use snapshot version
+- Provide Pull Request (PR)
+- Merge PR if OK
+- Check that a GitHub Actions build is triggered and successful
+- Check that the artifact is available on https://repo1.maven.org/maven2/com/github/camel-tooling/camel-dap-server/ . It usually takes up to 30 minutes.
+- Update pom to use next snapshot version
+- Provide PR
+- Merge PR if OK
