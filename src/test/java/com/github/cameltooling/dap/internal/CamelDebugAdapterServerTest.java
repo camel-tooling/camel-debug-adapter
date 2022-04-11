@@ -18,6 +18,7 @@ package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -60,6 +61,15 @@ class CamelDebugAdapterServerTest extends BaseTest {
 			startBasicRoute(context);
 			attachWithJMXURL(server, BacklogDebuggerConnectionManager.DEFAULT_JMX_URI);
 			checkConnectionEstablished();
+		}
+	}
+	
+	@Test
+	void testFailToAttach() throws Exception {
+		try (CamelContext context = new DefaultCamelContext()) {
+			startBasicRoute(context);
+			server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, "invalidUrl"));
+			assertThat(clientProxy.getOutputEventArguments().get(0).getOutput()).contains("Please check that the Camel application under debug has the following requirements:");
 		}
 	}
 	
