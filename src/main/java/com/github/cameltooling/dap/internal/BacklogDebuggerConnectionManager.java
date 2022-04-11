@@ -17,6 +17,7 @@
 package com.github.cameltooling.dap.internal;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.HashMap;
@@ -40,6 +41,8 @@ import javax.xml.xpath.XPathFactory;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
+import org.eclipse.lsp4j.debug.OutputEventArguments;
+import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.ThreadEventArguments;
@@ -122,12 +125,27 @@ public class BacklogDebuggerConnectionManager {
 				checkSuspendedNodeThread.start();
 				return true;
 			} else {
-				LOGGER.warn("No BacklogDebugger found on connection with {}", jmxAddress);
+				String errorMessage = "No BacklogDebugger found on connection with "+ jmxAddress;
+				LOGGER.warn(errorMessage);
+				sendAttachErrorOutput(client, errorMessage);
 			}
 		} catch (Exception e) {
 			LOGGER.error("Error trying to attach", e);
+			sendAttachErrorOutput(client, e.getMessage());
 		}
 		return false;
+	}
+
+	private void sendAttachErrorOutput(IDebugProtocolClient client, String specificErrorMessage) {
+		OutputEventArguments errorEvent = new OutputEventArguments();
+		errorEvent.setCategory(OutputEventArgumentsCategory.STDERR);
+		errorEvent.setOutput("Error when trying to connect the Camel debugger: "+specificErrorMessage+"\n"
+				+ "Please check that the Camel application under debug has the following requirements:\n"
+				+ " - version 3.16+\n"
+				+ " - camel-debug is available on the classpath\n"
+				+ " - have JMX enabled\n"
+				+ "It might be interesting having also a look to the Debug Adpater for Camel log: "+ System.getProperty("java.io.tmpdir") + File.separator +  "log-camel-dap.log.\n");
+		client.output(errorEvent);
 	}
 
 	private JMXConnector connect(JMXServiceURL jmxUrl) throws IOException {
