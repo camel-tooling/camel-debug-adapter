@@ -116,24 +116,27 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			breakpoint.setMessage("the breakpoint "+ i);
 			breakpoints[i] = breakpoint;
 			Document routesDOMDocument = connectionManager.getRoutesDOMDocument();
-			
-			String path = "//*[@sourceLineNumber='" + line + "']";
-			//TODO: take care of sourceLocation and not only line number
-			// "//*[@sourceLocation='" + sourceLocation + "' and @sourceLineNumber='" + line + "']";
+			if (routesDOMDocument != null) {
+				String path = "//*[@sourceLineNumber='" + line + "']";
+				//TODO: take care of sourceLocation and not only line number
+				// "//*[@sourceLocation='" + sourceLocation + "' and @sourceLineNumber='" + line + "']";
 
-			try {
-				XPath xPath = XPathFactory.newInstance().newXPath();
-				Node breakpointTagFromContext = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
-				if (breakpointTagFromContext != null) {
-					String nodeId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
-					breakpoint.setNodeId(nodeId);
-					connectionManager.updateBreakpointsWithSources(breakpoint);
-					breakpointIds.add(nodeId);
-					connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
-					breakpoint.setVerified(true);
+				try {
+					XPath xPath = XPathFactory.newInstance().newXPath();
+					Node breakpointTagFromContext = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
+					if (breakpointTagFromContext != null) {
+						String nodeId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
+						breakpoint.setNodeId(nodeId);
+						connectionManager.updateBreakpointsWithSources(breakpoint);
+						breakpointIds.add(nodeId);
+						connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
+						breakpoint.setVerified(true);
+					}
+				} catch (Exception e) {
+					LOGGER.warn("Cannot find related id for "+ source.getPath() + "l." + line, e);
 				}
-			} catch (Exception e) {
-				LOGGER.warn("Cannot find related id", e);
+			} else {
+				LOGGER.warn("No active routes find in Camel context. Consequently, cannot set breakpoint for {} l.{}", source.getPath(), line);
 			}
 		}
 		removeOldBreakpoints(source, breakpointIds);
