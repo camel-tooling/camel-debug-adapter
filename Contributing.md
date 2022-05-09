@@ -19,7 +19,6 @@ To test with the Client integration of Eclipse IDE:
 - Install [Eclipse LSP4E](https://projects.eclipse.org/projects/technology.lsp4e) in your Eclipse Desktop instance
 - Build the Camel Debug Adapter Jar
 - Launch the Camel application that you want to debug
-- Grab the pid of the Camel Application
 - Create a `Debug Adapter Launcher` configuration
   - Select `launch a Debug Server using the following arguments`
   - In `command` field, set `java`
@@ -29,8 +28,7 @@ To test with the Client integration of Eclipse IDE:
   
   ```json
   {
-   "request": "attach",
-   "attach_pid": "<thePidOfTheCamelApplication>"
+   "request": "attach"
   }
   ```
   - Click `Debug`
