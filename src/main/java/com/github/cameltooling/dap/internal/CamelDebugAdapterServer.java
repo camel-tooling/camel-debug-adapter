@@ -24,10 +24,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
-
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.eclipse.lsp4j.debug.Breakpoint;
 import org.eclipse.lsp4j.debug.Capabilities;
@@ -43,6 +39,7 @@ import org.eclipse.lsp4j.debug.ScopesArguments;
 import org.eclipse.lsp4j.debug.ScopesResponse;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse;
+import org.eclipse.lsp4j.debug.SetExceptionBreakpointsArguments;
 import org.eclipse.lsp4j.debug.SetVariableArguments;
 import org.eclipse.lsp4j.debug.SetVariableResponse;
 import org.eclipse.lsp4j.debug.Source;
@@ -59,8 +56,6 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
-import org.w3c.dom.Node;
 
 import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
 import com.github.cameltooling.dap.internal.model.CamelScope;
@@ -115,28 +110,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			breakpoint.setLine(line);
 			breakpoint.setMessage("the breakpoint "+ i);
 			breakpoints[i] = breakpoint;
-			Document routesDOMDocument = connectionManager.getRoutesDOMDocument();
-			if (routesDOMDocument != null) {
-				String path = "//*[@sourceLineNumber='" + line + "']";
-				//TODO: take care of sourceLocation and not only line number
-				// "//*[@sourceLocation='" + sourceLocation + "' and @sourceLineNumber='" + line + "']";
-
-				try {
-					XPath xPath = XPathFactory.newInstance().newXPath();
-					Node breakpointTagFromContext = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
-					if (breakpointTagFromContext != null) {
-						String nodeId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
-						breakpoint.setNodeId(nodeId);
-						connectionManager.updateBreakpointsWithSources(breakpoint);
-						breakpointIds.add(nodeId);
-						connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
-						breakpoint.setVerified(true);
-					}
-				} catch (Exception e) {
-					LOGGER.warn("Cannot find related id for "+ source.getPath() + "l." + line, e);
-				}
-			} else {
-				LOGGER.warn("No active routes find in Camel context. Consequently, cannot set breakpoint for {} l.{}", source.getPath(), line);
+			String breakpointId = connectionManager.setBreakpoint(source, line, breakpoint);
+			if (breakpointId != null) {
+				breakpointIds.add(breakpointId);
 			}
 		}
 		removeOldBreakpoints(source, breakpointIds);
@@ -273,6 +249,15 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 
 	public BacklogDebuggerConnectionManager getConnectionManager() {
 		return connectionManager;
+	}
+	
+	@Override
+	public CompletableFuture<Void> setExceptionBreakpoints(SetExceptionBreakpointsArguments args) {
+		LOGGER.error("Setting Exception breakpoint is not supported. it should not be called");
+		LOGGER.error("Filters: " + String.join(",",args.getFilters()));
+		LOGGER.error("getExceptionOptions length: " + args.getExceptionOptions().length);
+		LOGGER.error("getFilterOptions length: " + args.getFilterOptions().length);
+		return IDebugProtocolServer.super.setExceptionBreakpoints(args);
 	}
 
 }

@@ -20,6 +20,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -28,6 +29,7 @@ import java.util.Set;
 
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
@@ -43,6 +45,7 @@ import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
 import org.eclipse.lsp4j.debug.OutputEventArguments;
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
+import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.ThreadEventArguments;
@@ -66,6 +69,7 @@ public class BacklogDebuggerConnectionManager {
 	private static final String OBJECTNAME_CAMELCONTEXT = "org.apache.camel:context=*,type=context,name=*";
 	public static final String DEFAULT_JMX_URI = "service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi/camel";
 	private static final Logger LOGGER = LoggerFactory.getLogger(BacklogDebuggerConnectionManager.class);
+	private static final int AUTOMATIC_RESTART_TIMEOUT = 5000;
 
 	public static final String ATTACH_PARAM_PID = "attach_pid";
 	public static final String ATTACH_PARAM_JMX_URL = "attach_jmx_url";
@@ -81,6 +85,7 @@ public class BacklogDebuggerConnectionManager {
 	private Map<String, CamelBreakpoint> camelBreakpointsWithSources = new HashMap<>();
 	
 	private boolean isStepping = false;
+	private String jmxAddress;
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -104,7 +109,7 @@ public class BacklogDebuggerConnectionManager {
 	public boolean attach(Map<String, Object> args, IDebugProtocolClient client) {
 		this.client = client;
 		try {
-			String jmxAddress = (String) args.getOrDefault(ATTACH_PARAM_JMX_URL, DEFAULT_JMX_URI);
+			jmxAddress = (String) args.getOrDefault(ATTACH_PARAM_JMX_URL, DEFAULT_JMX_URI);
 			Object pid = args.get(ATTACH_PARAM_PID);
 			if (pid != null) {
 				jmxAddress = getLocalJMXUrl((String) pid);
@@ -172,6 +177,7 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	private void checkSuspendedBreakpoints() {
+		try {
 		while(backlogDebugger != null && backlogDebugger.isEnabled()) {
 			Set<String> suspendedBreakpointNodeIds = backlogDebugger.suspendedBreakpointNodeIds();
 			for (String nodeId : suspendedBreakpointNodeIds) {
@@ -187,6 +193,105 @@ public class BacklogDebuggerConnectionManager {
 				return;
 			}
 		}
+		} catch (UndeclaredThrowableException ute) {
+			automaticReconnection();
+		}
+	}
+
+	private void automaticReconnection() {
+		if (backlogDebugger != null) {
+			// assume that it is an Automatic restart
+			resetDebuggerState();
+			int count = 0;
+			boolean isConnectionAvailableAgain = false;
+			while (backlogDebugger != null && count < AUTOMATIC_RESTART_TIMEOUT && !isConnectionAvailableAgain) {
+				System.out.println("Loop in automaticReconnection");
+				count +=100;
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+					Thread.currentThread().interrupt();
+					return;
+				}
+				isConnectionAvailableAgain = connect(jmxAddress);
+			}
+			if (isConnectionAvailableAgain) {
+				try {
+					routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
+					addBackBreakpoints();
+					checkSuspendedBreakpoints();
+				} catch (Exception e) {
+					LOGGER.error("Cannot update routes dom document from "+ jmxAddress, e);
+				}
+			}
+		}
+	}
+
+	private void addBackBreakpoints() {
+		for (CamelBreakpoint camelBreakpoint : camelBreakpointsWithSources.values()) {
+			setBreakpoint(camelBreakpoint.getSource(), camelBreakpoint.getLine(), camelBreakpoint);
+		}
+	}
+
+	private void resetDebuggerState() {
+		isStepping = false;
+		for (CamelThread camelThread : camelThreads) {
+			sendThreadExitEvent(camelThread);
+		}
+		camelThreads.clear();
+		notifiedSuspendedBreakpointIds.clear();
+	}
+
+	private boolean connect(String jmxAddress) {
+		System.out.println("Try connect to "+ jmxAddress);
+		try {
+			JMXServiceURL jmxUrl = new JMXServiceURL(jmxAddress);
+			jmxConnector = connect(jmxUrl);
+			System.out.println("JMX connector retrieved");
+			mbeanConnection = jmxConnector.getMBeanServerConnection();
+			ObjectName objectName = new ObjectName(OBJECTNAME_BACKLOGDEBUGGER);
+			Set<ObjectName> names = mbeanConnection.queryNames(objectName, null);
+			if (names != null && !names.isEmpty()) {
+				ObjectName debuggerMBeanObjectName = names.iterator().next();
+				backlogDebugger = JMX.newMBeanProxy(mbeanConnection, debuggerMBeanObjectName, ManagedBacklogDebuggerMBean.class);
+				System.out.println("connection succesful");
+				return true;
+			}
+		} catch (MalformedObjectNameException | IOException | UndeclaredThrowableException e) {
+			// Silence while trying to reconnect. We know it will fail a lot because the connection might not be ready.
+			System.out.println(e);
+		} catch (Throwable t) {
+			System.out.println(t);
+		}
+		System.out.println("failed to connect");
+		return false;
+	}
+	
+	public String setBreakpoint(Source source, int line, CamelBreakpoint breakpoint) {
+		String breakpointId = null;
+		if (routesDOMDocument != null) {
+			String path = "//*[@sourceLineNumber='" + line + "']";
+			//TODO: take care of sourceLocation and not only line number
+			// "//*[@sourceLocation='" + sourceLocation + "' and @sourceLineNumber='" + line + "']";
+
+			try {
+				XPath xPath = XPathFactory.newInstance().newXPath();
+				Node breakpointTagFromContext = (Node) xPath.evaluate(path, routesDOMDocument, XPathConstants.NODE);
+				if (breakpointTagFromContext != null) {
+					String nodeId = breakpointTagFromContext.getAttributes().getNamedItem("id").getTextContent();
+					breakpoint.setNodeId(nodeId);
+					updateBreakpointsWithSources(breakpoint);
+					breakpointId  = nodeId;
+					getBacklogDebugger().addBreakpoint(nodeId);
+					breakpoint.setVerified(true);
+				}
+			} catch (Exception e) {
+				LOGGER.warn("Cannot find related id for "+ source.getPath() + "l." + line, e);
+			}
+		} else {
+			LOGGER.warn("No active routes find in Camel context. Consequently, cannot set breakpoint for {} l.{}", source.getPath(), line);
+		}
+		return breakpointId;
 	}
 
 	private void handleSuspendedBreakpoint(String nodeId) {

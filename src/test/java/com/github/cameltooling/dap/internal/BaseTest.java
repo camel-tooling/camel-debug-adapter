@@ -62,8 +62,12 @@ public abstract class BaseTest {
 	}
 
 	protected void waitBreakpointNotification(int numberOfBreakpointNotifications) {
+		waitBreakpointNotification(numberOfBreakpointNotifications, 3);
+	}
+
+	protected void waitBreakpointNotification(int numberOfBreakpointNotifications, int waitTime) {
 		await("Wait that breakpoint hit is notified")
-			.atMost(Duration.ofSeconds(3))
+			.atMost(Duration.ofSeconds(waitTime))
 			.until(() -> {
 				return clientProxy.getStoppedEventArguments().size() == numberOfBreakpointNotifications;
 			});
