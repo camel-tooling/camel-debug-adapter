@@ -89,7 +89,13 @@ public abstract class BaseTest {
 	}
 
 	protected void attach(CamelDebugAdapterServer server, Map<String, Object> paramMap) {
+		assertThat(clientProxy.hasReceivedInitializedEvent())
+			.as("The initialized event should not have been sent yet. The debugger has been attached and thus cannot handle the setBreakpoint requests.")
+			.isFalse();
 		server.attach(paramMap);
+		assertThat(clientProxy.hasReceivedInitializedEvent())
+			.as("The initialized event should have been sent right after the attach method is successful. The debugger is ready to receive the setBreakpoint requests.")
+			.isTrue();
 		BacklogDebuggerConnectionManager connectionManager = server.getConnectionManager();
 		assertThat(connectionManager.getMbeanConnection()).as("The MBeanConnection has not been established.").isNotNull();
 		assertThat(connectionManager.getBacklogDebugger()).as("The BacklogDebugger has not been found.").isNotNull();

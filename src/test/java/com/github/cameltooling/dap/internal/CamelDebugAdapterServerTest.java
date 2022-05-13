@@ -34,7 +34,7 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	void testInitialize() throws InterruptedException, ExecutionException {
 		CompletableFuture<Capabilities> initialization = initDebugger();
 		assertThat(initialization.get()).isNotNull();
-		assertThat(clientProxy.hasReceivedInitializedEvent()).isTrue();
+		assertThat(clientProxy.hasReceivedInitializedEvent()).isFalse();
 	}
 	
 	@Test
