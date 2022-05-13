@@ -83,7 +83,6 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
-		client.initialized();
 		Capabilities capabilities = new Capabilities();
 		capabilities.setSupportsSetVariable(Boolean.TRUE);
 		return CompletableFuture.completedFuture(capabilities);
@@ -92,6 +91,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<Void> attach(Map<String, Object> args) {
 		boolean attached = connectionManager.attach(args, client);
+		if (attached) {
+			client.initialized();
+		}
 		OutputEventArguments telemetryEvent = new OutputEventArguments();
 		telemetryEvent.setCategory(OutputEventArgumentsCategory.TELEMETRY);
 		telemetryEvent.setOutput("camel.dap.attach");
