@@ -70,6 +70,8 @@ import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
+	private static final String CAMEL_LANGUAGE_SIMPLE = "simple";
+
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
 
 	private IDebugProtocolClient client;
@@ -85,6 +87,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
 		Capabilities capabilities = new Capabilities();
 		capabilities.setSupportsSetVariable(Boolean.TRUE);
+		capabilities.setSupportsConditionalBreakpoints(Boolean.TRUE);
 		return CompletableFuture.completedFuture(capabilities);
 	}
 	
@@ -131,7 +134,11 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 						breakpoint.setNodeId(nodeId);
 						connectionManager.updateBreakpointsWithSources(breakpoint);
 						breakpointIds.add(nodeId);
-						connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
+						if (sourceBreakpoint.getCondition() != null) {
+							connectionManager.getBacklogDebugger().addConditionalBreakpoint(nodeId, CAMEL_LANGUAGE_SIMPLE, sourceBreakpoint.getCondition());
+						} else {
+							connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
+						}
 						breakpoint.setVerified(true);
 					}
 				} catch (Exception e) {

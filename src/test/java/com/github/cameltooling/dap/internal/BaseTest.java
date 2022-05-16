@@ -153,7 +153,7 @@ public abstract class BaseTest {
 		return setBreakpointsArguments;
 	}
 
-	private int findLineNumber(File sourceFile, String markerToPutBreakpoint) throws FileNotFoundException {
+	protected int findLineNumber(File sourceFile, String markerToPutBreakpoint) throws FileNotFoundException {
 		int line = 1;
 		try (Scanner scanner = new Scanner(sourceFile);) {
 			while (scanner.hasNextLine()) {
