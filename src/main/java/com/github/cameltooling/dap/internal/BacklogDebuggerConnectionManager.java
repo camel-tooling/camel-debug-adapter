@@ -144,7 +144,7 @@ public class BacklogDebuggerConnectionManager {
 				+ " - version 3.16+\n"
 				+ " - camel-debug is available on the classpath\n"
 				+ " - have JMX enabled\n"
-				+ "It might be interesting having also a look to the Debug Adpater for Camel log: "+ System.getProperty("java.io.tmpdir") + File.separator +  "log-camel-dap.log.\n");
+				+ "It might be interesting having also a look to the Debug Adapter for Camel log: "+ System.getProperty("java.io.tmpdir") + File.separator +  "log-camel-dap.log.\n");
 		client.output(errorEvent);
 	}
 
