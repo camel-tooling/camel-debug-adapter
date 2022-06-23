@@ -31,6 +31,7 @@ import javax.xml.xpath.XPathFactory;
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.eclipse.lsp4j.debug.Breakpoint;
 import org.eclipse.lsp4j.debug.Capabilities;
+import org.eclipse.lsp4j.debug.ConfigurationDoneArguments;
 import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.ContinueResponse;
 import org.eclipse.lsp4j.debug.DisconnectArguments;
@@ -88,6 +89,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Capabilities capabilities = new Capabilities();
 		capabilities.setSupportsSetVariable(Boolean.TRUE);
 		capabilities.setSupportsConditionalBreakpoints(Boolean.TRUE);
+		capabilities.setSupportsConfigurationDoneRequest(Boolean.TRUE);
 		return CompletableFuture.completedFuture(capabilities);
 	}
 	
@@ -284,4 +286,17 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		return connectionManager;
 	}
 
+	@Override
+	public CompletableFuture<Void> configurationDone(ConfigurationDoneArguments args) {
+		// Resume potentially the message processing
+		return CompletableFuture.runAsync(
+			() -> {
+				try {
+					connectionManager.getBacklogDebugger().attach();
+				} catch (Exception e) {
+					LOGGER.warn("Could not attach the debugger: {}", e.getMessage());
+				}
+			}
+		);
+	}
 }

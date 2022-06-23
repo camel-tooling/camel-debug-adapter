@@ -264,6 +264,11 @@ public class BacklogDebuggerConnectionManager {
 
 	public void terminate() {
 		if (backlogDebugger != null) {
+			try {
+				backlogDebugger.detach();
+			} catch (Exception e) {
+				LOGGER.warn("Could not detach the debugger: {}", e.getMessage());
+			}
 			backlogDebugger = null;
 		}
 		if (jmxConnector != null) {
