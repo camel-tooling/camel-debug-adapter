@@ -20,7 +20,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
@@ -34,35 +33,32 @@ class RemoveBreakpointTest extends BaseTest {
 
 	@Test
 	void testRemoveOneBreakpoint() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			String fromUri = "direct:testRemoveBreakpoint";
-			context.addRoutes(new RouteBuilder() {
-			
-				@Override
-				public void configure() throws Exception {
-					from(fromUri)
-						.log("Log from test"); // XXX-breakpoint-XXX
-				}
-			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
-			initDebugger();
-			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX");
-			server.setBreakpoints(setBreakpointsArguments).get();
-			
-			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, fromUri);
-			producerTemplate.start();
-			startRouteAndCheckBreakPointHit(fromUri, producerTemplate);
-			
-			SetBreakpointsArguments unsetBreakpointsArguments = createSetBreakpointArgument();
-			server.setBreakpoints(unsetBreakpointsArguments).get();
-			
-			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(fromUri, null);
-			waitRouteIsDone(asyncSendBody2);
-			
-			producerTemplate.stop();
-		}
+		context = new DefaultCamelContext();
+		String fromUri = "direct:testRemoveBreakpoint";
+		context.addRoutes(new RouteBuilder() {
+
+			@Override
+			public void configure() throws Exception {
+				from(fromUri)
+					.log("Log from test"); // XXX-breakpoint-XXX
+			}
+		});
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		initDebugger();
+		attach(server);
+		SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX");
+		server.setBreakpoints(setBreakpointsArguments).get();
+
+		producerTemplate = DefaultProducerTemplate.newInstance(context, fromUri);
+		producerTemplate.start();
+		startRouteAndCheckBreakPointHit(fromUri, producerTemplate);
+
+		SetBreakpointsArguments unsetBreakpointsArguments = createSetBreakpointArgument();
+		server.setBreakpoints(unsetBreakpointsArguments).get();
+
+		CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(fromUri, null);
+		waitRouteIsDone(asyncSendBody2);
 	}
 
 	private void startRouteAndCheckBreakPointHit(String fromUri, DefaultProducerTemplate producerTemplate) {

@@ -57,77 +57,74 @@ abstract class BasicDebugFlowTest extends BaseTest {
 	 */
 	@Test
 	void testBasicFlow() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			String routeId = "a-route-id";
-			String logEndpointId = "testBasicFlow-log-id";
-			registerRouteToTest(context, routeId, logEndpointId);
-			context.start();
-			assertThat(context.isStarted()).isTrue();
-			initDebugger();
-			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument();
-			int lineNumberToPutBreakpoint = setBreakpointsArguments.getBreakpoints()[0].getLine();
-			
-			SetBreakpointsResponse response = server.setBreakpoints(setBreakpointsArguments).get();
-			
-			Breakpoint[] responseBreakpoints = response.getBreakpoints();
-			assertThat(responseBreakpoints).hasSize(1);
-			Breakpoint responseBreakpoint = responseBreakpoints[0];
-			assertThat(responseBreakpoint.getLine()).isEqualTo(lineNumberToPutBreakpoint);
-			assertThat(responseBreakpoint.isVerified()).isTrue();
-			Set<String> breakpointsSetInCamel = server.getConnectionManager().getBacklogDebugger().breakpoints();
-			assertThat(breakpointsSetInCamel).hasSize(1);
+		context = new DefaultCamelContext();
+		String routeId = "a-route-id";
+		String logEndpointId = "testBasicFlow-log-id";
+		registerRouteToTest(context, routeId, logEndpointId);
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		initDebugger();
+		attach(server);
+		SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument();
+		int lineNumberToPutBreakpoint = setBreakpointsArguments.getBreakpoints()[0].getLine();
 
-			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testSetBreakpoint");
-			producerTemplate.start();
-			String body = "a body for test";
-			CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testSetBreakpoint", body);
-			
-			waitBreakpointNotification(1);
-			StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
-			assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
-			assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
-			
-			assertThat(asyncSendBody.isDone()).isFalse();
-			
-			assertThat(clientProxy.getAllStacksAndVars()).hasSize(1);
-			StackAndVarOnStopEvent stackAndData = clientProxy.getAllStacksAndVars().get(0);
-			await().untilAsserted(() -> assertThat(stackAndData.getThreads()).hasSize(1));
-			await().untilAsserted(() -> assertThat(stackAndData.getStackFrames()).hasSize(1));
-			await().untilAsserted(() -> assertThat(stackAndData.getScopes()).hasSize(5));
-			await("handling of stop event response is finished")
-			 .atMost(Duration.ofSeconds(60))
-			 .until(() -> {
-				 return stackAndData.getVariables().size() == 23;
-			 });
-			ManagedBacklogDebuggerMBean debugger = server.getConnectionManager().getBacklogDebugger();
-			List<Variable> variables = stackAndData.getVariables();
-			assertThat(variables)
-				.contains(
-						new MessageBodyCamelVariable(logEndpointId, body),
-						new LoggingLevelCamelVariable(debugger),
-						new MaxCharsForBodyCamelVariable(debugger),
-						new FallbackTimeoutCamelVariable(debugger),
-						new DebugCounterCamelVariable(debugger),
-						new BodyIncludeFilesCamelVariable(debugger),
-						new BodyIncludeStreamsCamelVariable(debugger),
-						createVariable("To node", logEndpointId),
-						createVariable("Route ID", routeId),
-						createVariable("header1", "value of header 1"),
-						createVariable("header2", "value of header 2"),
-						createVariable("property1", "value of property 1"),
-						createVariable("property2", "value of property 2"));
-			
-			assertThat(variables.stream().map(var -> var.getValue()))
-				.as("All variables must have a non-null values due to limitation in VS Code implementation, see https://github.com/microsoft/vscode/issues/141544")
-				.doesNotContain(new String[] {null});
-			
-			server.continue_(new ContinueArguments());
-			
-			waitRouteIsDone(asyncSendBody);
-			
-			producerTemplate.stop();
-		}
+		SetBreakpointsResponse response = server.setBreakpoints(setBreakpointsArguments).get();
+
+		Breakpoint[] responseBreakpoints = response.getBreakpoints();
+		assertThat(responseBreakpoints).hasSize(1);
+		Breakpoint responseBreakpoint = responseBreakpoints[0];
+		assertThat(responseBreakpoint.getLine()).isEqualTo(lineNumberToPutBreakpoint);
+		assertThat(responseBreakpoint.isVerified()).isTrue();
+		Set<String> breakpointsSetInCamel = server.getConnectionManager().getBacklogDebugger().breakpoints();
+		assertThat(breakpointsSetInCamel).hasSize(1);
+
+		producerTemplate = DefaultProducerTemplate.newInstance(context, "direct:testSetBreakpoint");
+		producerTemplate.start();
+		String body = "a body for test";
+		CompletableFuture<Object> asyncSendBody = producerTemplate.asyncSendBody("direct:testSetBreakpoint", body);
+
+		waitBreakpointNotification(1);
+		StoppedEventArguments stoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
+		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
+		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
+
+		assertThat(asyncSendBody.isDone()).isFalse();
+
+		assertThat(clientProxy.getAllStacksAndVars()).hasSize(1);
+		StackAndVarOnStopEvent stackAndData = clientProxy.getAllStacksAndVars().get(0);
+		await().untilAsserted(() -> assertThat(stackAndData.getThreads()).hasSize(1));
+		await().untilAsserted(() -> assertThat(stackAndData.getStackFrames()).hasSize(1));
+		await().untilAsserted(() -> assertThat(stackAndData.getScopes()).hasSize(5));
+		await("handling of stop event response is finished")
+			.atMost(Duration.ofSeconds(60))
+			.until(() -> {
+				return stackAndData.getVariables().size() == 23;
+			});
+		ManagedBacklogDebuggerMBean debugger = server.getConnectionManager().getBacklogDebugger();
+		List<Variable> variables = stackAndData.getVariables();
+		assertThat(variables)
+			.contains(
+				new MessageBodyCamelVariable(logEndpointId, body),
+				new LoggingLevelCamelVariable(debugger),
+				new MaxCharsForBodyCamelVariable(debugger),
+				new FallbackTimeoutCamelVariable(debugger),
+				new DebugCounterCamelVariable(debugger),
+				new BodyIncludeFilesCamelVariable(debugger),
+				new BodyIncludeStreamsCamelVariable(debugger),
+				createVariable("To node", logEndpointId),
+				createVariable("Route ID", routeId),
+				createVariable("header1", "value of header 1"),
+				createVariable("header2", "value of header 2"),
+				createVariable("property1", "value of property 1"),
+				createVariable("property2", "value of property 2"));
+
+		assertThat(variables.stream().map(var -> var.getValue()))
+			.as("All variables must have a non-null values due to limitation in VS Code implementation, see https://github.com/microsoft/vscode/issues/141544")
+			.doesNotContain(new String[] {null});
+
+		server.continue_(new ContinueArguments());
+
+		waitRouteIsDone(asyncSendBody);
 	}
 
 	protected abstract SetBreakpointsArguments createSetBreakpointArgument() throws FileNotFoundException;

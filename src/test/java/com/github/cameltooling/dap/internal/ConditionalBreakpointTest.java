@@ -22,7 +22,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
@@ -39,47 +38,44 @@ class ConditionalBreakpointTest extends BaseTest {
 	
 	@Test
 	void testCondition() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			String routeId = "a-route-id";
-			String startEndpointUri = "direct:testConditionalBreakpoint";
-			context.addRoutes(new RouteBuilder() {
-			
-				@Override
-				public void configure() throws Exception {
-					from(startEndpointUri)
-						.routeId(routeId)
-						.log("Log from test");  // XXX-breakpoint-XXX
-				}
-			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
-			initDebugger();
-			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX", "${body} == 'specific content'");
-			
-			server.setBreakpoints(setBreakpointsArguments).get();
-			
-			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
-			producerTemplate.start();
-			
-			CompletableFuture<Object> asyncSendBody1 = producerTemplate.asyncSendBody(startEndpointUri, "a body");
-			waitRouteIsDone(asyncSendBody1);
-			
-			CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(startEndpointUri, "specific content");
-			
-			waitBreakpointNotification(1);
-			StoppedEventArguments secondStoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
-			assertThat(secondStoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
-			assertThat(asyncSendBody2.isDone()).isFalse();
-			awaitAllVariablesFilled(0);
-			server.continue_(new ContinueArguments());
-			
-			waitRouteIsDone(asyncSendBody2);
-			
-			assertThat(server.threads().get().getThreads()).isEmpty();
-			
-			producerTemplate.stop();
-		}
+		context = new DefaultCamelContext();
+		String routeId = "a-route-id";
+		String startEndpointUri = "direct:testConditionalBreakpoint";
+		context.addRoutes(new RouteBuilder() {
+
+			@Override
+			public void configure() throws Exception {
+				from(startEndpointUri)
+					.routeId(routeId)
+					.log("Log from test");  // XXX-breakpoint-XXX
+			}
+		});
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		initDebugger();
+		attach(server);
+		SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-XXX", "${body} == 'specific content'");
+
+		server.setBreakpoints(setBreakpointsArguments).get();
+
+		producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
+		producerTemplate.start();
+
+		CompletableFuture<Object> asyncSendBody1 = producerTemplate.asyncSendBody(startEndpointUri, "a body");
+		waitRouteIsDone(asyncSendBody1);
+
+		CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(startEndpointUri, "specific content");
+
+		waitBreakpointNotification(1);
+		StoppedEventArguments secondStoppedEventArgument = clientProxy.getStoppedEventArguments().get(0);
+		assertThat(secondStoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
+		assertThat(asyncSendBody2.isDone()).isFalse();
+		awaitAllVariablesFilled(0);
+		server.continue_(new ContinueArguments());
+
+		waitRouteIsDone(asyncSendBody2);
+
+		assertThat(server.threads().get().getThreads()).isEmpty();
 	}
 	
 	

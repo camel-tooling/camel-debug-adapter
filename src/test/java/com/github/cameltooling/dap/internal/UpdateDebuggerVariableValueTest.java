@@ -57,9 +57,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 	protected static final String SECOND_LOG_ID = "second-log-id";
 	private static final int NUMBER_OF_HEADER = 1;
 	private static final int NUMBER_OF_EXCHANGE_PROPERTY = 1;
-	private DefaultCamelContext context;
 	private Scope debuggerScope;
-	private DefaultProducerTemplate producerTemplate;
 	private CompletableFuture<Object> asyncSendBody;
 
 	@BeforeEach
@@ -103,13 +101,8 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 	
 	@AfterEach
 	void afterEach() {
-		try {
-			server.continue_(new ContinueArguments());
-			waitRouteIsDone(asyncSendBody);
-			producerTemplate.stop();
-		} finally {
-			context.stop();
-		}
+		server.continue_(new ContinueArguments());
+		waitRouteIsDone(asyncSendBody);
 	}
 
 	@Test

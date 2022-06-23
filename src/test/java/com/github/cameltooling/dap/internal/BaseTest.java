@@ -27,6 +27,8 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.camel.CamelContext;
+import org.apache.camel.impl.engine.DefaultProducerTemplate;
 import org.eclipse.lsp4j.debug.Capabilities;
 import org.eclipse.lsp4j.debug.InitializeRequestArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
@@ -44,13 +46,15 @@ public abstract class BaseTest {
 	protected static final int DEFAULT_VARIABLES_NUMBER = 19;
 	protected CamelDebugAdapterServer server;
 	protected DummyCamelDebugClient clientProxy;
+	protected CamelContext context;
+	protected DefaultProducerTemplate producerTemplate;
 
 	public BaseTest() {
 		super();
 	}
 
 	@AfterEach
-	void tearDown() {
+	void tearDown() throws Exception {
 		if (server != null) {
 			server.terminate(new TerminateArguments());
 			server = null;
@@ -58,6 +62,14 @@ public abstract class BaseTest {
 		if (clientProxy != null) {
 			clientProxy.terminated(new TerminatedEventArguments());
 			clientProxy = null;
+		}
+		if (producerTemplate != null) {
+			producerTemplate.close();
+			producerTemplate = null;
+		}
+		if (context != null) {
+			context.close();
+			context = null;
 		}
 	}
 
