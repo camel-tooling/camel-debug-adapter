@@ -16,7 +16,6 @@
  */
 package com.github.cameltooling.dap.internal;
 
-import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.debugger.BacklogDebugger;
@@ -36,71 +35,65 @@ class SuspendTest extends BaseTest {
 	@Test
 	@SetSystemProperty(key = BacklogDebugger.SUSPEND_MODE_SYSTEM_PROP_NAME, value = "true")
 	void testOnSuspendModeEnabled() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			String routeId = "a-route-id";
-			String startEndpointUri = "direct:testResume";
-			context.addRoutes(new RouteBuilder() {
+		context = new DefaultCamelContext();
+		String routeId = "a-route-id";
+		String startEndpointUri = "direct:testResume";
+		context.addRoutes(new RouteBuilder() {
 
-				@Override
-				public void configure() throws Exception {
-					from(startEndpointUri)
-						.routeId(routeId)
-						.log("Log from test");  // XXX-breakpoint-route-instance-1
-				}
-			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
-			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
-			producerTemplate.start();
+			@Override
+			public void configure() throws Exception {
+				from(startEndpointUri)
+					.routeId(routeId)
+					.log("Log from test");  // XXX-breakpoint-route-instance-1
+			}
+		});
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
+		producerTemplate.start();
 
-			producerTemplate.asyncSendBody(startEndpointUri, "a body");
+		producerTemplate.asyncSendBody(startEndpointUri, "a body");
 
-			initDebugger();
-			attach(server);
+		initDebugger();
+		attach(server);
 
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-route-instance-1");
-			server.setBreakpoints(setBreakpointsArguments).get();
+		SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-route-instance-1");
+		server.setBreakpoints(setBreakpointsArguments).get();
 
-			server.configurationDone(new ConfigurationDoneArguments());
-			waitBreakpointNotification(1);
-
-			producerTemplate.stop();
-		}
+		server.configurationDone(new ConfigurationDoneArguments());
+		waitBreakpointNotification(1);
 	}
 
 	@Test
 	@SetSystemProperty(key = BacklogDebugger.SUSPEND_MODE_SYSTEM_PROP_NAME, value = "false")
 	void testOnSuspendModeDisabled() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			String routeId = "a-route-id";
-			String startEndpointUri = "direct:testResume";
-			context.addRoutes(new RouteBuilder() {
+		context = new DefaultCamelContext();
+		String routeId = "a-route-id";
+		String startEndpointUri = "direct:testResume";
+		context.addRoutes(new RouteBuilder() {
 
-				@Override
-				public void configure() throws Exception {
-					from(startEndpointUri)
-						.routeId(routeId)
-						.log("Log from test");  // XXX-breakpoint-route-instance-2
-				}
-			});
-			context.start();
-			assertThat(context.isStarted()).isTrue();
-			initDebugger();
-			attach(server);
-			SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-route-instance-2");
+			@Override
+			public void configure() throws Exception {
+				from(startEndpointUri)
+					.routeId(routeId)
+					.log("Log from test");  // XXX-breakpoint-route-instance-2
+			}
+		});
+		context.start();
+		assertThat(context.isStarted()).isTrue();
+		initDebugger();
+		attach(server);
+		SetBreakpointsArguments setBreakpointsArguments = createSetBreakpointArgument("XXX-breakpoint-route-instance-2");
 
-			server.setBreakpoints(setBreakpointsArguments).get();
+		server.setBreakpoints(setBreakpointsArguments).get();
 
-			DefaultProducerTemplate producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
-			producerTemplate.start();
+		producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri);
+		producerTemplate.start();
 
-			producerTemplate.asyncSendBody(startEndpointUri, "a body");
+		producerTemplate.asyncSendBody(startEndpointUri, "a body");
 
-			server.configurationDone(new ConfigurationDoneArguments());
-			waitBreakpointNotification(1);
-
-			producerTemplate.stop();
-		}
+		server.configurationDone(new ConfigurationDoneArguments());
+		waitBreakpointNotification(1);
 	}
 
 }

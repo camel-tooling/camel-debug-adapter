@@ -39,38 +39,34 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	
 	@Test
 	void testAttachToCamelWithPid() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			startBasicRoute(context);
-			attachWithPid(server);
-			checkConnectionEstablished();
-		}
+		context = new DefaultCamelContext();
+		startBasicRoute(context);
+		attachWithPid(server);
+		checkConnectionEstablished();
 	}
 
 	@Test
 	void testAttachToCamelWithDefaultJMX() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			startBasicRoute(context);
-			attach(server);
-			checkConnectionEstablished();
-		}
+		context = new DefaultCamelContext();
+		startBasicRoute(context);
+		attach(server);
+		checkConnectionEstablished();
 	}
 	
 	@Test
 	void testAttachToCamelWithProvidedJMXURL() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			startBasicRoute(context);
-			attachWithJMXURL(server, BacklogDebuggerConnectionManager.DEFAULT_JMX_URI);
-			checkConnectionEstablished();
-		}
+		context = new DefaultCamelContext();
+		startBasicRoute(context);
+		attachWithJMXURL(server, BacklogDebuggerConnectionManager.DEFAULT_JMX_URI);
+		checkConnectionEstablished();
 	}
 	
 	@Test
 	void testFailToAttach() throws Exception {
-		try (CamelContext context = new DefaultCamelContext()) {
-			startBasicRoute(context);
-			server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, "invalidUrl"));
-			assertThat(clientProxy.getOutputEventArguments().get(0).getOutput()).contains("Please check that the Camel application under debug has the following requirements:");
-		}
+		context = new DefaultCamelContext();
+		startBasicRoute(context);
+		server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, "invalidUrl"));
+		assertThat(clientProxy.getOutputEventArguments().get(0).getOutput()).contains("Please check that the Camel application under debug has the following requirements:");
 	}
 	
 	private void checkConnectionEstablished() {
