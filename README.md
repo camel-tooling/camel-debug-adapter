@@ -41,6 +41,7 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
   - Message header (for String types)
   - Exchange property (for String types)
 - Conditional breakpoint with `simple` language. See [here](https://camel.apache.org/components/latest/languages/simple-language.html) for details on how to write condition with simple language.
+- Wait for all breakpoints to be ready to process messages when starting a new Camel application (requires Camel 3.18+). To activate it, use either `camel:debug` Maven goal, or `org.apache.camel.debugger.suspend` system property set to `true` or `CAMEL_DEBUGGER_SUSPEND` environment variable set to `true`.
 
 ## How to use it
 
