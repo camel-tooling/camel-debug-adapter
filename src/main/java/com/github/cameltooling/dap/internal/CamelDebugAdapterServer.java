@@ -76,9 +76,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
 
 	private IDebugProtocolClient client;
-	private BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
+	private final BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
 
-	private Map<String, Set<String>> sourceToBreakpointIds = new HashMap<>();
+	private final Map<String, Set<String>> sourceToBreakpointIds = new HashMap<>();
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -169,7 +169,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<ThreadsResponse> threads() {
 		ThreadsResponse value = new ThreadsResponse();
 		Set<CamelThread> threads = connectionManager.getCamelThreads();
-		value.setThreads(threads.toArray(new CamelThread[threads.size()]));
+		value.setThreads(threads.toArray(new CamelThread[0]));
 		return CompletableFuture.completedFuture(value);
 	}
 	
@@ -183,7 +183,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			CamelThread camelThread = camelThreadOptional.get();
 			stackFrames.add(camelThread.getStackFrame());
 		}
-		response.setStackFrames(stackFrames.toArray(new StackFrame[stackFrames.size()]) );
+		response.setStackFrames(stackFrames.toArray(new StackFrame[0]) );
 		return CompletableFuture.completedFuture(response);
 	}
 	
@@ -198,7 +198,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		if (camelStackFrameOptional.isPresent()) {
 			scopes = camelStackFrameOptional.get().createScopes();
 		}
-		response.setScopes(scopes.toArray(new Scope[scopes.size()]));
+		response.setScopes(scopes.toArray(new Scope[0]));
 		return CompletableFuture.completedFuture(response);
 	}
 
@@ -209,10 +209,10 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Set<Variable> variables = new HashSet<>();
 		
 		ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
-		for (CamelThread camelThread : new HashSet<CamelThread>(connectionManager.getCamelThreads())) {
+		for (CamelThread camelThread : new HashSet<>(connectionManager.getCamelThreads())) {
 			variables.addAll(camelThread.createVariables(variablesReference, debugger));
 		}
-		response.setVariables(variables.toArray(new Variable[variables.size()]));
+		response.setVariables(variables.toArray(new Variable[0]));
 		return CompletableFuture.completedFuture(response);
 	}
 
