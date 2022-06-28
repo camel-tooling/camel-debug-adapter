@@ -29,9 +29,9 @@ import com.github.cameltooling.dap.internal.types.EventMessage;
 
 public class CamelThread extends Thread {
 
-	private String breakpointId;
-	private CamelStackFrame stackFrame;
-	private EventMessage eventMessage;
+	private final String breakpointId;
+	private final CamelStackFrame stackFrame;
+	private final EventMessage eventMessage;
 
 	public CamelThread(int threadId, String breakpointId, EventMessage eventMessage, CamelBreakpoint camelBreakpoint) {
 		setId(threadId);

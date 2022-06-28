@@ -38,7 +38,7 @@ import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsFor
 public class CamelDebuggerScope extends CamelScope {
 
 	public static final String NAME = "Debugger";
-	private Set<CamelVariable> variables = new HashSet<>();
+	private volatile Set<CamelVariable> variables = Collections.unmodifiableSet(new HashSet<>());
 
 	public CamelDebuggerScope(CamelStackFrame stackframe) {
 		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Debugger@" + stackframe.getName()).hashCode()));
@@ -46,14 +46,15 @@ public class CamelDebuggerScope extends CamelScope {
 	
 	public Set<CamelVariable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		if(variablesReference == getVariablesReference()) {
-			variables.clear();
-			variables.add(new LoggingLevelCamelVariable(debugger));
-			variables.add(new MaxCharsForBodyCamelVariable(debugger));
-			variables.add(new DebugCounterCamelVariable(debugger));
-			variables.add(new FallbackTimeoutCamelVariable(debugger));
-			variables.add(new BodyIncludeFilesCamelVariable(debugger));
-			variables.add(new BodyIncludeStreamsCamelVariable(debugger));
-			return variables;
+			final Set<CamelVariable> allVariables = new HashSet<>();
+			allVariables.add(new LoggingLevelCamelVariable(debugger));
+			allVariables.add(new MaxCharsForBodyCamelVariable(debugger));
+			allVariables.add(new DebugCounterCamelVariable(debugger));
+			allVariables.add(new FallbackTimeoutCamelVariable(debugger));
+			allVariables.add(new BodyIncludeFilesCamelVariable(debugger));
+			allVariables.add(new BodyIncludeStreamsCamelVariable(debugger));
+			this.variables = Collections.unmodifiableSet(allVariables);
+			return allVariables;
 		}
 		return Collections.emptySet();
 	}

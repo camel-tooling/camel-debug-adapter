@@ -20,11 +20,11 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
@@ -70,17 +70,17 @@ public class BacklogDebuggerConnectionManager {
 	public static final String ATTACH_PARAM_PID = "attach_pid";
 	public static final String ATTACH_PARAM_JMX_URL = "attach_jmx_url";
 
-	private JMXConnector jmxConnector;
-	private MBeanServerConnection mbeanConnection;
-	private ManagedBacklogDebuggerMBean backlogDebugger;
-	private Document routesDOMDocument;
-	private IDebugProtocolClient client;
-	private Set<String> notifiedSuspendedBreakpointIds = new HashSet<>();
-	private Set<CamelThread> camelThreads = new HashSet<>();
-	int threadIdCounter = 1;
-	private Map<String, CamelBreakpoint> camelBreakpointsWithSources = new HashMap<>();
+	private volatile JMXConnector jmxConnector;
+	private volatile MBeanServerConnection mbeanConnection;
+	private volatile ManagedBacklogDebuggerMBean backlogDebugger;
+	private volatile Document routesDOMDocument;
+	private volatile IDebugProtocolClient client;
+	private final Set<String> notifiedSuspendedBreakpointIds = ConcurrentHashMap.newKeySet();
+	private final Set<CamelThread> camelThreads = ConcurrentHashMap.newKeySet();
+	private final AtomicInteger threadIdCounter = new AtomicInteger();
+	private final Map<String, CamelBreakpoint> camelBreakpointsWithSources = new ConcurrentHashMap<>();
 	
-	private boolean isStepping = false;
+	private volatile boolean isStepping;
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -197,13 +197,13 @@ public class BacklogDebuggerConnectionManager {
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
 			if(thread.isEmpty()) {
-				camelThreads.add(new CamelThread(threadIdCounter, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
+				final int threadId = threadIdCounter.incrementAndGet();
+				camelThreads.add(new CamelThread(threadId, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
 				ThreadEventArguments threadEventArguments = new ThreadEventArguments();
 				threadEventArguments.setReason(ThreadEventArgumentsReason.STARTED);
-				threadEventArguments.setThreadId(threadIdCounter);
+				threadEventArguments.setThreadId(threadId);
 				client.thread(threadEventArguments);
-				stoppedEventArgs.setThreadId(threadIdCounter);
-				threadIdCounter++;
+				stoppedEventArgs.setThreadId(threadId);
 			} else {
 				CamelThread camelThread = thread.get();
 				CamelBreakpoint camelBreakpoint = retrieveCorrespondingBreakpoint(nodeId, camelThread);
@@ -242,12 +242,13 @@ public class BacklogDebuggerConnectionManager {
 		return null;
 	}
 
-	private Document retrieveRoutesWithSourceLineNumber(String jmxAddress) throws Exception{
+	private Document retrieveRoutesWithSourceLineNumber(String jmxAddress) throws Exception {
+		MBeanServerConnection connection = mbeanConnection;
 		ObjectName camelContextObjectName = new ObjectName(OBJECTNAME_CAMELCONTEXT);
-		Set<ObjectName> camelContextMbeanNames = mbeanConnection.queryNames(camelContextObjectName, null);
+		Set<ObjectName> camelContextMbeanNames = connection.queryNames(camelContextObjectName, null);
 		if (camelContextMbeanNames != null && !camelContextMbeanNames.isEmpty()) {
 			ObjectName mbeanName = camelContextMbeanNames.iterator().next();
-			ManagedCamelContextMBean camelContext = JMX.newMBeanProxy(mbeanConnection, mbeanName,
+			ManagedCamelContextMBean camelContext = JMX.newMBeanProxy(connection, mbeanName,
 					ManagedCamelContextMBean.class);
 
 			String routes = camelContext.dumpRoutesAsXml(false, true);
@@ -275,7 +276,7 @@ public class BacklogDebuggerConnectionManager {
 			try {
 				jmxConnector.close();
 			} catch (IOException e) {
-				LOGGER.error("Error while termintating debug session and closing connection", e);
+				LOGGER.error("Error while terminating debug session and closing connection", e);
 			}
 		}
 	}

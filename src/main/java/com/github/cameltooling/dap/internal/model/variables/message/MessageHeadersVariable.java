@@ -30,8 +30,8 @@ import com.github.cameltooling.dap.internal.types.Header;
 
 public class MessageHeadersVariable extends Variable {
 	
-	private List<Header> headers;
-	private String breakpointId;
+	private final List<Header> headers;
+	private final String breakpointId;
 
 	public MessageHeadersVariable(int parentVariablesReference, List<Header> headers, String breakpointId) {
 		this.headers = headers;
