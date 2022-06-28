@@ -23,7 +23,7 @@ import com.github.cameltooling.dap.internal.model.variables.CamelVariable;
 public class MessageBodyCamelVariable extends CamelVariable {
 
 	public static final String NAME = "Body";
-	private String breakpointId;
+	private final String breakpointId;
 
 	public MessageBodyCamelVariable(String breakpointId, String body) {
 		this.breakpointId = breakpointId;

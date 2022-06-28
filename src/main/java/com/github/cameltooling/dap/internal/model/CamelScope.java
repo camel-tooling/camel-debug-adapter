@@ -27,7 +27,7 @@ import org.eclipse.lsp4j.debug.Variable;
 
 public abstract class CamelScope extends Scope {
 
-	private String breakpointId;
+	private final String breakpointId;
 
 	protected CamelScope(String name, String breakpointId, int variableRefId) {
 		setName(name);

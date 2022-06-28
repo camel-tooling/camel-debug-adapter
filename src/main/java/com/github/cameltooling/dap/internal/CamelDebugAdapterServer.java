@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -75,10 +76,10 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
 
-	private IDebugProtocolClient client;
+	private volatile IDebugProtocolClient client;
 	private final BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
 
-	private final Map<String, Set<String>> sourceToBreakpointIds = new HashMap<>();
+	private final Map<String, Set<String>> sourceToBreakpointIds = new ConcurrentHashMap<>();
 
 	public void connect(IDebugProtocolClient clientProxy) {
 		this.client = clientProxy;
@@ -95,15 +96,16 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<Void> attach(Map<String, Object> args) {
-		boolean attached = connectionManager.attach(args, client);
+		IDebugProtocolClient protocolClient = client;
+		boolean attached = connectionManager.attach(args, protocolClient);
 		if (attached) {
-			client.initialized();
+			protocolClient.initialized();
 		}
 		OutputEventArguments telemetryEvent = new OutputEventArguments();
 		telemetryEvent.setCategory(OutputEventArgumentsCategory.TELEMETRY);
 		telemetryEvent.setOutput("camel.dap.attach");
 		telemetryEvent.setData(new TelemetryEvent("camel.dap.attach", Collections.singletonMap("success", attached)));
-		client.output(telemetryEvent);
+		protocolClient.output(telemetryEvent);
 		return CompletableFuture.completedFuture(null);
 	}
 	
@@ -209,7 +211,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		Set<Variable> variables = new HashSet<>();
 		
 		ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
-		for (CamelThread camelThread : new HashSet<>(connectionManager.getCamelThreads())) {
+		for (CamelThread camelThread : connectionManager.getCamelThreads()) {
 			variables.addAll(camelThread.createVariables(variablesReference, debugger));
 		}
 		response.setVariables(variables.toArray(new Variable[0]));

@@ -30,8 +30,8 @@ import com.github.cameltooling.dap.internal.types.ExchangeProperty;
 
 public class ExchangePropertiesVariable extends Variable {
 	
-	private List<ExchangeProperty> exchangeProperties;
-	private String breakpointId;
+	private final List<ExchangeProperty> exchangeProperties;
+	private final String breakpointId;
 
 	public ExchangePropertiesVariable(int parentVariablesReference, List<ExchangeProperty> exchangeProperties, String breakpointId) {
 		this.exchangeProperties = exchangeProperties;

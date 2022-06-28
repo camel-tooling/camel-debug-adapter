@@ -16,6 +16,7 @@
  */
 package com.github.cameltooling.dap.internal.model;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -32,7 +33,7 @@ import com.github.cameltooling.dap.internal.model.scopes.CamelProcessorScope;
 
 public class CamelStackFrame extends StackFrame {
 
-	private Set<CamelScope> scopes = new HashSet<>();
+	private volatile Set<CamelScope> scopes = Collections.unmodifiableSet(new HashSet<>());
 
 	public CamelStackFrame(int frameId, String breakpointId, Source source, Integer line) {
 		setId(frameId);
@@ -42,13 +43,14 @@ public class CamelStackFrame extends StackFrame {
 	}
 	
 	public Set<CamelScope> createScopes() {
-		scopes.clear();
-		scopes.add(new CamelDebuggerScope(this));
-		scopes.add(new CamelEndpointScope(this));
-		scopes.add(new CamelProcessorScope(this));
-		scopes.add(new CamelExchangeScope(this));
-		scopes.add(new CamelMessageScope(this));
-		return scopes;
+		final Set<CamelScope> allScopes = new HashSet<>();
+		allScopes.add(new CamelDebuggerScope(this));
+		allScopes.add(new CamelEndpointScope(this));
+		allScopes.add(new CamelProcessorScope(this));
+		allScopes.add(new CamelExchangeScope(this));
+		allScopes.add(new CamelMessageScope(this));
+		this.scopes = Collections.unmodifiableSet(allScopes);
+		return allScopes;
 	}
 
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
