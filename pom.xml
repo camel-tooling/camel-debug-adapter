@@ -46,35 +46,11 @@
 		<sonar.organization>camel-tooling</sonar.organization>
 		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 
-		<version.camel>3.18.0-SNAPSHOT</version.camel>
+		<version.camel>3.18.0</version.camel>
 		<!-- must be aligned with the one from Camel -->
 		<version.jaxb>2.3.3</version.jaxb>
 		<version.junit.pioneer>1.7.1</version.junit.pioneer>
 	</properties>
-	<repositories>
-		<repository>
-			<id>central</id>
-			<url>https://repo1.maven.org/maven2/</url>
-			<name>Maven Central</name>
-			<snapshots>
-				<enabled>false</enabled>
-			</snapshots>
-			<releases>
-				<enabled>true</enabled>
-			</releases>
-		</repository>
-		<repository>
-			<id>apache.snapshots</id>
-			<url>https://repository.apache.org/snapshots/</url>
-			<name>Apache Snapshot Repo</name>
-			<snapshots>
-				<enabled>true</enabled>
-			</snapshots>
-			<releases>
-				<enabled>false</enabled>
-			</releases>
-		</repository>
-	</repositories>
 	<build>
 		<plugins>
 			<plugin>
