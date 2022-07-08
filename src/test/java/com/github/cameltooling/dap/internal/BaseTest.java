@@ -56,7 +56,7 @@ public abstract class BaseTest {
 	@AfterEach
 	void tearDown() throws Exception {
 		if (server != null) {
-			server.terminate(new TerminateArguments());
+			server.terminate(new TerminateArguments()).get();
 			server = null;
 		}
 		if (clientProxy != null) {
@@ -81,12 +81,12 @@ public abstract class BaseTest {
 			});
 	}
 
-	protected void attachWithPid(CamelDebugAdapterServer server) {
+	protected void attachWithPid(CamelDebugAdapterServer server) throws Exception {
 		Map<String, Object> paramMap = Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_PID, Long.toString(ProcessHandle.current().pid()));
 		attach(server, paramMap);
 	}
 	
-	protected void attachWithJMXURL(CamelDebugAdapterServer server, String jmxUrl) {
+	protected void attachWithJMXURL(CamelDebugAdapterServer server, String jmxUrl) throws Exception {
 		Map<String, Object> paramMap = Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, jmxUrl);
 		attach(server, paramMap);
 	}
@@ -96,15 +96,15 @@ public abstract class BaseTest {
 	 * 
 	 * @param server
 	 */
-	protected void attach(CamelDebugAdapterServer server) {
+	protected void attach(CamelDebugAdapterServer server) throws Exception {
 		attach(server, Collections.emptyMap());
 	}
 
-	protected void attach(CamelDebugAdapterServer server, Map<String, Object> paramMap) {
+	protected void attach(CamelDebugAdapterServer server, Map<String, Object> paramMap) throws Exception {
 		assertThat(clientProxy.hasReceivedInitializedEvent())
 			.as("The initialized event should not have been sent yet. The debugger has been attached and thus cannot handle the setBreakpoint requests.")
 			.isFalse();
-		server.attach(paramMap);
+		server.attach(paramMap).get();
 		assertThat(clientProxy.hasReceivedInitializedEvent())
 			.as("The initialized event should have been sent right after the attach method is successful. The debugger is ready to receive the setBreakpoint requests.")
 			.isTrue();
@@ -179,11 +179,11 @@ public abstract class BaseTest {
 		return -1;
 	}
 
-	protected CompletableFuture<Capabilities> initDebugger() {
+	protected Capabilities initDebugger() throws Exception {
 		server = new CamelDebugAdapterServer();
 		clientProxy = new DummyCamelDebugClient(server);
 		server.connect(clientProxy);
-		return server.initialize(new InitializeRequestArguments());
+		return server.initialize(new InitializeRequestArguments()).get();
 	}
 
 	protected void awaitAllVariablesFilled(int indexOfAllStacksAndVars, int variablesNumber) {
