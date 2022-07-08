@@ -50,7 +50,6 @@ public class CamelMessageScope extends CamelScope {
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			if(eventMessage != null) {
 				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
-				variables.add(createVariable("UID", Long.toString(eventMessage.getUid())));
 				messageBody = new MessageBodyCamelVariable(getBreakpointId(), eventMessage.getMessage().getBody());
 				variables.add(messageBody);
 				headersVariable = new MessageHeadersVariable(variablesReference, eventMessage.getMessage().getHeaders(), getBreakpointId());

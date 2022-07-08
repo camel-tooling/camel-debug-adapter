@@ -43,7 +43,7 @@ import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
 public abstract class BaseTest {
 
-	protected static final int DEFAULT_VARIABLES_NUMBER = 19;
+	protected static final int DEFAULT_VARIABLES_NUMBER = 18;
 	protected CamelDebugAdapterServer server;
 	protected DummyCamelDebugClient clientProxy;
 	protected CamelContext context;

@@ -97,9 +97,7 @@ abstract class BasicDebugFlowTest extends BaseTest {
 		await().untilAsserted(() -> assertThat(stackAndData.getScopes()).hasSize(5));
 		await("handling of stop event response is finished")
 			.atMost(Duration.ofSeconds(60))
-			.until(() -> {
-				return stackAndData.getVariables().size() == 23;
-			});
+			.untilAsserted(() -> assertThat(stackAndData.getVariables()).hasSize(22));
 		ManagedBacklogDebuggerMBean debugger = server.getConnectionManager().getBacklogDebugger();
 		List<Variable> variables = stackAndData.getVariables();
 		assertThat(variables)
