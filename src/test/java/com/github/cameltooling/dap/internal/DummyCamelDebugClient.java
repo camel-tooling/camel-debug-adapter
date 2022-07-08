@@ -40,13 +40,13 @@ import org.eclipse.lsp4j.debug.services.IDebugProtocolClient;
 
 public class DummyCamelDebugClient implements IDebugProtocolClient {
 	
-	private boolean hasReceivedInitializedEvent;
-	private List<StoppedEventArguments> stoppedEventArguments = new ArrayList<>();
-	private List<StackAndVarOnStopEvent> wholeStackAndVars = new ArrayList<>();
-	private List<ThreadEventArguments> threadEventArgumentss = new ArrayList<>();
-	private List<OutputEventArguments> telemetryEvents = new ArrayList<>();
-	private List<OutputEventArguments> outputEventArguments = new ArrayList<>();
-	private CamelDebugAdapterServer server;
+	private volatile boolean hasReceivedInitializedEvent;
+	private final List<StoppedEventArguments> stoppedEventArguments = new ArrayList<>();
+	private final List<StackAndVarOnStopEvent> wholeStackAndVars = new ArrayList<>();
+	private final List<ThreadEventArguments> threadEventArgumentss = new ArrayList<>();
+	private final List<OutputEventArguments> telemetryEvents = new ArrayList<>();
+	private final List<OutputEventArguments> outputEventArguments = new ArrayList<>();
+	private final CamelDebugAdapterServer server;
 
 	public DummyCamelDebugClient(CamelDebugAdapterServer server) {
 		this.server = server;

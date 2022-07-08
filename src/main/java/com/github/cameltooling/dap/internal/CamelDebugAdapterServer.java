@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
@@ -86,31 +87,41 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<Capabilities> initialize(InitializeRequestArguments args) {
-		Capabilities capabilities = new Capabilities();
-		capabilities.setSupportsSetVariable(Boolean.TRUE);
-		capabilities.setSupportsConditionalBreakpoints(Boolean.TRUE);
-		capabilities.setSupportsConfigurationDoneRequest(Boolean.TRUE);
-		return CompletableFuture.completedFuture(capabilities);
+		return supplyAsync(
+			() -> {
+				Capabilities capabilities = new Capabilities();
+				capabilities.setSupportsSetVariable(Boolean.TRUE);
+				capabilities.setSupportsConditionalBreakpoints(Boolean.TRUE);
+				capabilities.setSupportsConfigurationDoneRequest(Boolean.TRUE);
+				return capabilities;
+			}
+		);
 	}
 	
 	@Override
 	public CompletableFuture<Void> attach(Map<String, Object> args) {
-		IDebugProtocolClient protocolClient = client;
-		boolean attached = connectionManager.attach(args, protocolClient);
-		if (attached) {
-			protocolClient.initialized();
-		}
-		OutputEventArguments telemetryEvent = new OutputEventArguments();
-		telemetryEvent.setCategory(OutputEventArgumentsCategory.TELEMETRY);
-		telemetryEvent.setOutput("camel.dap.attach");
-		telemetryEvent.setData(new TelemetryEvent("camel.dap.attach", Collections.singletonMap("success", attached)));
-		protocolClient.output(telemetryEvent);
-		return CompletableFuture.completedFuture(null);
+		return runAsync(
+			() -> {
+				IDebugProtocolClient protocolClient = client;
+				boolean attached = connectionManager.attach(args, protocolClient);
+				if (attached) {
+					protocolClient.initialized();
+				}
+				OutputEventArguments telemetryEvent = new OutputEventArguments();
+				telemetryEvent.setCategory(OutputEventArgumentsCategory.TELEMETRY);
+				telemetryEvent.setOutput("camel.dap.attach");
+				telemetryEvent.setData(new TelemetryEvent("camel.dap.attach", Collections.singletonMap("success", attached)));
+				protocolClient.output(telemetryEvent);
+			}
+		);
 	}
 	
 	@Override
 	public CompletableFuture<SetBreakpointsResponse> setBreakpoints(SetBreakpointsArguments setBreakpointsArguments) {
-		SetBreakpointsResponse response = new SetBreakpointsResponse();
+		return supplyAsync(() -> setBreakpointsSync(setBreakpointsArguments));
+	}
+
+	private SetBreakpointsResponse setBreakpointsSync(SetBreakpointsArguments setBreakpointsArguments) {
 		Source source = setBreakpointsArguments.getSource();
 		SourceBreakpoint[] sourceBreakpoints = setBreakpointsArguments.getBreakpoints();
 		Breakpoint[] breakpoints = new Breakpoint[sourceBreakpoints.length];
@@ -153,8 +164,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		}
 		removeOldBreakpoints(source, breakpointIds);
 		sourceToBreakpointIds.put(source.getPath(), breakpointIds);
+		SetBreakpointsResponse response = new SetBreakpointsResponse();
 		response.setBreakpoints(breakpoints);
-		return CompletableFuture.completedFuture(response);
+		return response;
 	}
 
 	private void removeOldBreakpoints(Source source, Set<String> breakpointIds) {
@@ -168,71 +180,89 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<ThreadsResponse> threads() {
-		ThreadsResponse value = new ThreadsResponse();
-		Set<CamelThread> threads = connectionManager.getCamelThreads();
-		value.setThreads(threads.toArray(new CamelThread[0]));
-		return CompletableFuture.completedFuture(value);
+		return supplyAsync(
+			() -> {
+				Set<CamelThread> threads = connectionManager.getCamelThreads();
+				ThreadsResponse value = new ThreadsResponse();
+				value.setThreads(threads.toArray(new CamelThread[0]));
+				return value;
+			}
+		);
 	}
 	
 	@Override
 	public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
-		StackTraceResponse response = new StackTraceResponse();
-		Set<StackFrame> stackFrames = new HashSet<>();
-		Set<CamelThread> camelThreads = connectionManager.getCamelThreads();
-		Optional<CamelThread> camelThreadOptional = camelThreads.stream().filter(camelThread -> camelThread.getId() == args.getThreadId()).findAny();
-		if (camelThreadOptional.isPresent()) {
-			CamelThread camelThread = camelThreadOptional.get();
-			stackFrames.add(camelThread.getStackFrame());
-		}
-		response.setStackFrames(stackFrames.toArray(new StackFrame[0]) );
-		return CompletableFuture.completedFuture(response);
+		return supplyAsync(
+			() -> {
+				Set<CamelThread> camelThreads = connectionManager.getCamelThreads();
+				Optional<CamelThread> camelThreadOptional = camelThreads.stream().filter(camelThread -> camelThread.getId() == args.getThreadId()).findAny();
+				Set<StackFrame> stackFrames = new HashSet<>();
+				if (camelThreadOptional.isPresent()) {
+					CamelThread camelThread = camelThreadOptional.get();
+					stackFrames.add(camelThread.getStackFrame());
+				}
+				StackTraceResponse response = new StackTraceResponse();
+				response.setStackFrames(stackFrames.toArray(new StackFrame[0]));
+				return response;
+			}
+		);
 	}
 	
 	@Override
 	public CompletableFuture<ScopesResponse> scopes(ScopesArguments args) {
-		ScopesResponse response = new ScopesResponse();
-		Optional<CamelStackFrame> camelStackFrameOptional = connectionManager.getCamelThreads().stream()
-				.map(CamelThread::getStackFrame)
-				.filter(stackFrame -> args.getFrameId() == stackFrame.getId())
-				.findAny();
-		Set<CamelScope> scopes = new HashSet<>();
-		if (camelStackFrameOptional.isPresent()) {
-			scopes = camelStackFrameOptional.get().createScopes();
-		}
-		response.setScopes(scopes.toArray(new Scope[0]));
-		return CompletableFuture.completedFuture(response);
+		return supplyAsync(
+			() -> {
+				Optional<CamelStackFrame> camelStackFrameOptional = connectionManager.getCamelThreads().stream()
+					.map(CamelThread::getStackFrame)
+					.filter(stackFrame -> args.getFrameId() == stackFrame.getId())
+					.findAny();
+				Set<CamelScope> scopes = new HashSet<>();
+				if (camelStackFrameOptional.isPresent()) {
+					scopes = camelStackFrameOptional.get().createScopes();
+				}
+				ScopesResponse response = new ScopesResponse();
+				response.setScopes(scopes.toArray(new Scope[0]));
+				return response;
+			}
+		);
 	}
 
 	@Override
 	public CompletableFuture<VariablesResponse> variables(VariablesArguments args) {
-		int variablesReference = args.getVariablesReference();
-		VariablesResponse response = new VariablesResponse();
-		Set<Variable> variables = new HashSet<>();
-		
-		ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
-		for (CamelThread camelThread : connectionManager.getCamelThreads()) {
-			variables.addAll(camelThread.createVariables(variablesReference, debugger));
-		}
-		response.setVariables(variables.toArray(new Variable[0]));
-		return CompletableFuture.completedFuture(response);
+		return supplyAsync(
+			() -> {
+				Set<Variable> variables = new HashSet<>();
+				ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
+				for (CamelThread camelThread : connectionManager.getCamelThreads()) {
+					variables.addAll(camelThread.createVariables(args.getVariablesReference(), debugger));
+				}
+				VariablesResponse response = new VariablesResponse();
+				response.setVariables(variables.toArray(new Variable[0]));
+				return response;
+			}
+		);
 	}
 
 	@Override
 	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {
-		ContinueResponse response = new ContinueResponse();
-		int threadId = args.getThreadId();
-		if (threadId != 0) {
-			response.setAllThreadsContinued(Boolean.FALSE);
-			Optional<CamelThread> findAny = findThread(threadId);
-			if (findAny.isPresent()) {
-				CamelThread camelThread = findAny.get();
-				connectionManager.resume(camelThread);
+		return supplyAsync(
+			() -> {
+				ContinueResponse response = new ContinueResponse();
+				int threadId = args.getThreadId();
+				if (threadId != 0) {
+					response.setAllThreadsContinued(Boolean.FALSE);
+					Optional<CamelThread> findAny = findThread(threadId);
+					if (findAny.isPresent()) {
+						CamelThread camelThread = findAny.get();
+						connectionManager.resume(camelThread);
+					}
+				} else {
+					connectionManager.resumeAll();
+					response.setAllThreadsContinued(Boolean.TRUE);
+				}
+				return response;
 			}
-		} else {
-			connectionManager.resumeAll();
-			response.setAllThreadsContinued(Boolean.TRUE);
-		}
-		return CompletableFuture.completedFuture(response);
+		);
 	}
 
 	private Optional<CamelThread> findThread(int threadId) {
@@ -241,46 +271,50 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
 	@Override
 	public CompletableFuture<Void> next(NextArguments args) {
-		int threadId = args.getThreadId();
-		Optional<CamelThread> findAny = findThread(threadId);
-		if (findAny.isPresent()) {
-			CamelThread camelThread = findAny.get();
-			connectionManager.next(camelThread);
-		}
-		return CompletableFuture.completedFuture(null);
+		return runAsync(
+			() -> {
+				Optional<CamelThread> findAny = findThread(args.getThreadId());
+				if (findAny.isPresent()) {
+					CamelThread camelThread = findAny.get();
+					connectionManager.next(camelThread);
+				}
+			}
+		);
 	}
 	
 	@Override
 	public CompletableFuture<Void> terminate(TerminateArguments args) {
-		connectionManager.terminate();
-		return CompletableFuture.completedFuture(null);
+		return runAsync(connectionManager::terminate);
 	}
 	
 	@Override
 	public CompletableFuture<Void> disconnect(DisconnectArguments args) {
-		connectionManager.terminate();
-		return CompletableFuture.completedFuture(null);
+		return runAsync(connectionManager::terminate);
 	}
 	
 	@Override
 	public CompletableFuture<SetVariableResponse> setVariable(SetVariableArguments args) {
-		for(CamelThread thread : connectionManager.getCamelThreads()) {
-			for(CamelScope scope : thread.getStackFrame().getScopes()) {
-				try {
-					SetVariableResponse response = scope.setVariableIfInScope(args, connectionManager.getBacklogDebugger());
-					if (response != null) {
-						return CompletableFuture.completedFuture(response);
+		return supplyAsync(
+			() -> {
+				for(CamelThread thread : connectionManager.getCamelThreads()) {
+					for(CamelScope scope : thread.getStackFrame().getScopes()) {
+						try {
+							SetVariableResponse response = scope.setVariableIfInScope(args, connectionManager.getBacklogDebugger());
+							if (response != null) {
+								return response;
+							}
+						} catch (Exception ex) {
+							OutputEventArguments eventToAlertUser = new OutputEventArguments();
+							eventToAlertUser.setCategory(OutputEventArgumentsCategory.STDERR);
+							eventToAlertUser.setOutput("Cannot set variable " + args.getName() + ": "+ ex.getClass().getCanonicalName() + ": " + ex.getMessage());
+							client.output(eventToAlertUser);
+							throw ex;
+						}
 					}
-				} catch (Exception ex) {
-					OutputEventArguments eventToAlertUser = new OutputEventArguments();
-					eventToAlertUser.setCategory(OutputEventArgumentsCategory.STDERR);
-					eventToAlertUser.setOutput("Cannot set variable " + args.getName() + ": "+ ex.getClass().getCanonicalName() + ": " + ex.getMessage());
-					client.output(eventToAlertUser);
-					throw ex;
 				}
+				return null;
 			}
-		}
-		return CompletableFuture.completedFuture(null);
+		);
 	}
 
 	public BacklogDebuggerConnectionManager getConnectionManager() {
@@ -290,12 +324,57 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	@Override
 	public CompletableFuture<Void> configurationDone(ConfigurationDoneArguments args) {
 		// Resume potentially the message processing
-		return CompletableFuture.runAsync(
+		return runAsync(
 			() -> {
 				try {
 					connectionManager.getBacklogDebugger().attach();
 				} catch (Exception e) {
 					LOGGER.warn("Could not attach the debugger: {}", e.getMessage());
+				}
+			}
+		);
+	}
+
+	/**
+	 * Executes asynchronously the given task ensuring that the context class loader is properly set to ensure that
+	 * the classes from third party libraries are found.
+	 *
+	 * @param runnable the task to execute
+	 * @return the new CompletableFuture
+	 */
+	private static CompletableFuture<Void> runAsync(Runnable runnable) {
+		final ClassLoader callerCCL = Thread.currentThread().getContextClassLoader();
+		return CompletableFuture.runAsync(
+			() -> {
+				final ClassLoader currentCCL = Thread.currentThread().getContextClassLoader();
+				try {
+					Thread.currentThread().setContextClassLoader(callerCCL);
+					runnable.run();
+				} finally {
+					Thread.currentThread().setContextClassLoader(currentCCL);
+				}
+			}
+		);
+	}
+
+	/**
+	 * Calls asynchronously the given supplier ensuring that the context class loader is properly set to ensure that
+	 * the classes from third party libraries are found.
+	 *
+	 * @param supplier the supplier to call
+	 * @return the new CompletableFuture
+	 * @param <U> the type of the result
+	 */
+	private static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier) {
+		final ClassLoader callerCCL = Thread.currentThread().getContextClassLoader();
+		return CompletableFuture.supplyAsync(
+			() -> {
+				final ClassLoader currentCCL = Thread.currentThread().getContextClassLoader();
+				try {
+					Thread.currentThread().setContextClassLoader(callerCCL);
+					return supplier.get();
+				} finally {
+					Thread.currentThread().setContextClassLoader(currentCCL);
 				}
 			}
 		);

@@ -16,24 +16,20 @@
  */
 package com.github.cameltooling.dap.internal;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.util.Collections;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.eclipse.lsp4j.debug.Capabilities;
 import org.junit.jupiter.api.Test;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 class CamelDebugAdapterServerTest extends BaseTest {
 	
 	@Test
-	void testInitialize() throws InterruptedException, ExecutionException {
-		CompletableFuture<Capabilities> initialization = initDebugger();
-		assertThat(initialization.get()).isNotNull();
+	void testInitialize() throws Exception {
+		assertThat(initDebugger()).isNotNull();
 		assertThat(clientProxy.hasReceivedInitializedEvent()).isFalse();
 	}
 	
@@ -65,7 +61,7 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	void testFailToAttach() throws Exception {
 		context = new DefaultCamelContext();
 		startBasicRoute(context);
-		server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, "invalidUrl"));
+		server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, "invalidUrl")).get();
 		assertThat(clientProxy.getOutputEventArguments().get(0).getOutput()).contains("Please check that the Camel application under debug has the following requirements:");
 	}
 	

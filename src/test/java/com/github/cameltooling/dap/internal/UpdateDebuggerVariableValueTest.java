@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
@@ -241,7 +242,11 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 
 		assertThrows(NumberFormatException.class,
 			() -> {
-				server.setVariable(args);
+				try {
+					server.setVariable(args).get();
+				} catch (ExecutionException e) {
+					throw e.getCause();
+				}
 			}
 		);
 
