@@ -17,7 +17,7 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -239,16 +239,10 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		args.setName(FallbackTimeoutCamelVariable.NAME);
 		args.setValue("invalid value");
 		args.setVariablesReference(debuggerScope.getVariablesReference());
-
-		assertThrows(NumberFormatException.class,
-			() -> {
-				try {
-					server.setVariable(args).get();
-				} catch (ExecutionException e) {
-					throw e.getCause();
-				}
-			}
-		);
+		
+		assertThatThrownBy(() -> server.setVariable(args).get())
+			.isInstanceOf(ExecutionException.class)
+			.hasCauseInstanceOf(NumberFormatException.class);
 
 		OutputEventArguments outputEventArguments = clientProxy.getOutputEventArguments().get(0);
 		assertThat(outputEventArguments.getCategory()).isEqualTo(OutputEventArgumentsCategory.STDERR);
