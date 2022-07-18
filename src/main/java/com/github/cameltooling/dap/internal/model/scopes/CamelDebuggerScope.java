@@ -38,7 +38,7 @@ import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsFor
 public class CamelDebuggerScope extends CamelScope {
 
 	public static final String NAME = "Debugger";
-	private volatile Set<CamelVariable> variables = Collections.unmodifiableSet(new HashSet<>());
+	private Set<CamelVariable> variables = Collections.unmodifiableSet(new HashSet<>());
 
 	public CamelDebuggerScope(CamelStackFrame stackframe) {
 		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Debugger@" + stackframe.getName()).hashCode()));

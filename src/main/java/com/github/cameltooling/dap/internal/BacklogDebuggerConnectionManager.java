@@ -70,11 +70,11 @@ public class BacklogDebuggerConnectionManager {
 	public static final String ATTACH_PARAM_PID = "attach_pid";
 	public static final String ATTACH_PARAM_JMX_URL = "attach_jmx_url";
 
-	private volatile JMXConnector jmxConnector;
-	private volatile MBeanServerConnection mbeanConnection;
-	private volatile ManagedBacklogDebuggerMBean backlogDebugger;
-	private volatile Document routesDOMDocument;
-	private volatile IDebugProtocolClient client;
+	private JMXConnector jmxConnector;
+	private MBeanServerConnection mbeanConnection;
+	private ManagedBacklogDebuggerMBean backlogDebugger;
+	private Document routesDOMDocument;
+	private IDebugProtocolClient client;
 	private final Set<String> notifiedSuspendedBreakpointIds = ConcurrentHashMap.newKeySet();
 	private final Set<CamelThread> camelThreads = ConcurrentHashMap.newKeySet();
 	private final AtomicInteger threadIdCounter = new AtomicInteger();
@@ -111,23 +111,26 @@ public class BacklogDebuggerConnectionManager {
 			}
 			JMXServiceURL jmxUrl = new JMXServiceURL(jmxAddress);
 			jmxConnector = connect(jmxUrl);
-			mbeanConnection = jmxConnector.getMBeanServerConnection();
-			ObjectName objectName = new ObjectName(OBJECTNAME_BACKLOGDEBUGGER);
-			Set<ObjectName> names = mbeanConnection.queryNames(objectName, null);
-			if (names != null && !names.isEmpty()) {
-				ObjectName debuggerMBeanObjectName = names.iterator().next();
-				backlogDebugger = JMX.newMBeanProxy(mbeanConnection, debuggerMBeanObjectName,
-						ManagedBacklogDebuggerMBean.class);
-				backlogDebugger.enableDebugger();
-				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
-				
-				Thread checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints, "Camel DAP - Check Suspended node");
-				checkSuspendedNodeThread.start();
-				return true;
-			} else {
-				String errorMessage = "No BacklogDebugger found on connection with "+ jmxAddress;
-				LOGGER.warn(errorMessage);
-				sendAttachErrorOutput(client, errorMessage);
+			if (jmxConnector != null) {
+				mbeanConnection = jmxConnector.getMBeanServerConnection();
+				ObjectName objectName = new ObjectName(OBJECTNAME_BACKLOGDEBUGGER);
+				Set<ObjectName> names = mbeanConnection.queryNames(objectName, null);
+				if (names != null && !names.isEmpty()) {
+					ObjectName debuggerMBeanObjectName = names.iterator().next();
+					backlogDebugger = JMX.newMBeanProxy(mbeanConnection, debuggerMBeanObjectName,
+							ManagedBacklogDebuggerMBean.class);
+					backlogDebugger.enableDebugger();
+					routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
+
+					Thread checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints,
+							"Camel DAP - Check Suspended node");
+					checkSuspendedNodeThread.start();
+					return true;
+				} else {
+					String errorMessage = "No BacklogDebugger found on connection with " + jmxAddress;
+					LOGGER.warn(errorMessage);
+					sendAttachErrorOutput(client, errorMessage);
+				}
 			}
 		} catch (Exception e) {
 			LOGGER.error("Error trying to attach", e);
