@@ -76,7 +76,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
 
-	private volatile IDebugProtocolClient client;
+	private IDebugProtocolClient client;
 	private final BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
 
 	private final Map<String, Set<String>> sourceToBreakpointIds = new ConcurrentHashMap<>();

@@ -33,7 +33,7 @@ import com.github.cameltooling.dap.internal.model.scopes.CamelProcessorScope;
 
 public class CamelStackFrame extends StackFrame {
 
-	private volatile Set<CamelScope> scopes = Collections.unmodifiableSet(new HashSet<>());
+	private Set<CamelScope> scopes = Collections.unmodifiableSet(new HashSet<>());
 
 	public CamelStackFrame(int frameId, String breakpointId, Source source, Integer line) {
 		setId(frameId);
