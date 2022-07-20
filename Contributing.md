@@ -36,11 +36,12 @@ To test with the Client integration of Eclipse IDE:
 
 # How to release
 
-- Update pom to not use snapshot version
+- Update [pom](pom.xml) to not use snapshot version
 - Provide Pull Request (PR)
 - Merge PR if OK
-- Check that a GitHub Actions build is triggered and successful
+- Check that a [GitHub Actions build](https://github.com/camel-tooling/camel-debug-adapter/actions) is triggered and successful
+- Create corresponding tag
 - Check that the artifact is available on https://repo1.maven.org/maven2/com/github/camel-tooling/camel-dap-server/ . It usually takes up to 30 minutes.
-- Update pom to use next snapshot version
+- Update [pom](pom.xml) to use next snapshot version
 - Provide PR
 - Merge PR if OK
