@@ -32,9 +32,6 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 - Stop on hit breakpoint
 - Resume a single route instance and resume all
 - Stepping when the route definition is in the same file
-- Specific client provided:
-  - on [Eclipse Desktop](https://github.com/camel-tooling/camel-dap-client-eclipse), install from [this update site](https://camel-tooling.github.io/camel-dap-client-eclipse/)
-  - on [VS Code](https://github.com/camel-tooling/camel-dap-client-vscode), snapshot binary available [here](https://download.jboss.org/jbosstools/vscode/snapshots/vscode-debug-adapter-apache-camel/)
 - Update values of:
   - Common variables which are grouped in `Debugger` scope
   - Message body
@@ -42,6 +39,16 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
   - Exchange property (for String types)
 - Conditional breakpoint with `simple` language. See [here](https://camel.apache.org/components/latest/languages/simple-language.html) for details on how to write condition with simple language.
 - Wait for all breakpoints to be ready to process messages when starting a new Camel application (requires Camel 3.18+). To activate it, use either `camel:debug` Maven goal, or `org.apache.camel.debugger.suspend` system property set to `true` or `CAMEL_DEBUGGER_SUSPEND` environment variable set to `true`.
+
+## Supported clients
+
+All clients supporting the Debug Adapter protocol can be used. The configuration might be tricky for some of them. For easier configuration see:
+
+- Specific client provided:
+  - on [Eclipse Desktop](https://github.com/camel-tooling/camel-dap-client-eclipse), install from [this update site](https://camel-tooling.github.io/camel-dap-client-eclipse/)
+  - on [VS Code](https://github.com/camel-tooling/camel-dap-client-vscode), for released version, see on [Microsoft VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-debug-adapter-apache-camel), for snapshot binary see [here](https://download.jboss.org/jbosstools/vscode/snapshots/vscode-debug-adapter-apache-camel/)
+- Tutorial provided:
+  - on [vim](https://github.com/camel-tooling/camel-dap-client-vim)
 
 ## How to use it
 
