@@ -156,7 +156,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 						breakpoint.setVerified(true);
 					}
 				} catch (Exception e) {
-					LOGGER.warn("Cannot find related id for "+ source.getPath() + "l." + line, e);
+					LOGGER.warn("Cannot find related id for "+ source.getPath() + " l." + line, e);
 				}
 			} else {
 				LOGGER.warn("No active routes find in Camel context. Consequently, cannot set breakpoint for {} l.{}", source.getPath(), line);
