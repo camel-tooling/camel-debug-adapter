@@ -65,6 +65,8 @@ public class CamelExchangeScope extends CamelScope {
 	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger) {
 		if (getVariablesReference() == args.getVariablesReference()) {
 			throw new UnsupportedOperationException("Not supported");
+		} else if (exchangeVariable == null) {
+			return null;
 		}
 		return exchangeVariable.setVariableIfInScope(args, backlogDebugger);
 	}

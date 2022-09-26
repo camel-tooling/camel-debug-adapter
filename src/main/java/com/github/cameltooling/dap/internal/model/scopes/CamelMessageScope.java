@@ -74,9 +74,10 @@ public class CamelMessageScope extends CamelScope {
 			} else {
 				throw new UnsupportedOperationException("Not supported");
 			}
-		} else {
-			return headersVariable.setVariableIfInScope(args, debugger);
+		} else if (headersVariable == null) {
+			return null;
 		}
+		return headersVariable.setVariableIfInScope(args, debugger);
 	}
 
 	public MessageHeadersVariable getHeadersVariable() {
