@@ -132,7 +132,6 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			CamelBreakpoint breakpoint = new CamelBreakpoint(source, line);
 			breakpoint.setSource(source);
 			breakpoint.setLine(line);
-			breakpoint.setMessage("the breakpoint "+ i);
 			breakpoints[i] = breakpoint;
 			Document routesDOMDocument = connectionManager.getRoutesDOMDocument();
 			if (routesDOMDocument != null) {
@@ -148,18 +147,20 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 						breakpoint.setNodeId(nodeId);
 						connectionManager.updateBreakpointsWithSources(breakpoint);
 						breakpointIds.add(nodeId);
-						if (sourceBreakpoint.getCondition() != null) {
-							connectionManager.getBacklogDebugger().addConditionalBreakpoint(nodeId, CAMEL_LANGUAGE_SIMPLE, sourceBreakpoint.getCondition());
-						} else {
-							connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
-						}
+						addBreakpoint(sourceBreakpoint, nodeId);
 						breakpoint.setVerified(true);
+					} else {
+						breakpoint.setMessage("The Camel debugger cannot find the related id for "+ source.getPath() + " l." + line);
 					}
 				} catch (Exception e) {
-					LOGGER.warn("Cannot find related id for "+ source.getPath() + " l." + line, e);
+					String baseMessage = "An exception occurred when searching for the related id for "+ source.getPath() + " l." + line +".";
+					breakpoint.setMessage(baseMessage + " See logs for more details: "+ e.getMessage());
+					LOGGER.warn(baseMessage, e);
 				}
 			} else {
-				LOGGER.warn("No active routes find in Camel context. Consequently, cannot set breakpoint for {} l.{}", source.getPath(), line);
+				String message = "No active routes found in Camel context. Consequently, the Camel debugger cannot set breakpoint for "+source.getPath()+" l."+line;
+				breakpoint.setMessage(message);
+				LOGGER.warn(message);
 			}
 		}
 		removeOldBreakpoints(source, breakpointIds);
@@ -167,6 +168,14 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		SetBreakpointsResponse response = new SetBreakpointsResponse();
 		response.setBreakpoints(breakpoints);
 		return response;
+	}
+
+	private void addBreakpoint(SourceBreakpoint sourceBreakpoint, String nodeId) {
+		if (sourceBreakpoint.getCondition() != null) {
+			connectionManager.getBacklogDebugger().addConditionalBreakpoint(nodeId, CAMEL_LANGUAGE_SIMPLE, sourceBreakpoint.getCondition());
+		} else {
+			connectionManager.getBacklogDebugger().addBreakpoint(nodeId);
+		}
 	}
 
 	private void removeOldBreakpoints(Source source, Set<String> breakpointIds) {
