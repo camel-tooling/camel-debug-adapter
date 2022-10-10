@@ -72,6 +72,11 @@ import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
+	private static final String BREAKPOINT_MESSAGE_EXCEPTION_OCCURED_WHEN_SEARCHING_ID = "%s See logs for more details: %s";
+	private static final String MESSAGE_NO_ACTIVE_ROUTES_FOUND = "No active routes found in Camel context. Consequently, the Camel debugger cannot set breakpoint for %s l.%s";
+	private static final String BASE_MESSAGE_EXCEPTION_WHEN_SEARCHING_FOR_ID = "An exception occurred when searching for the related id for %s l.%s.";
+	private static final String BREAKPOINT_MESSAGE_CANNOT_FIND_ID = "The Camel debugger cannot find the related id for %s l.%s";
+
 	private static final String CAMEL_LANGUAGE_SIMPLE = "simple";
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
@@ -150,15 +155,15 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 						addBreakpoint(sourceBreakpoint, nodeId);
 						breakpoint.setVerified(true);
 					} else {
-						breakpoint.setMessage("The Camel debugger cannot find the related id for "+ source.getPath() + " l." + line);
+						breakpoint.setMessage(String.format(BREAKPOINT_MESSAGE_CANNOT_FIND_ID, source.getPath(), line));
 					}
 				} catch (Exception e) {
-					String baseMessage = "An exception occurred when searching for the related id for "+ source.getPath() + " l." + line +".";
-					breakpoint.setMessage(baseMessage + " See logs for more details: "+ e.getMessage());
+					String baseMessage = String.format(BASE_MESSAGE_EXCEPTION_WHEN_SEARCHING_FOR_ID, source.getPath(), line);
+					breakpoint.setMessage(String.format(BREAKPOINT_MESSAGE_EXCEPTION_OCCURED_WHEN_SEARCHING_ID, baseMessage, e.getMessage()));
 					LOGGER.warn(baseMessage, e);
 				}
 			} else {
-				String message = "No active routes found in Camel context. Consequently, the Camel debugger cannot set breakpoint for "+source.getPath()+" l."+line;
+				String message = String.format(MESSAGE_NO_ACTIVE_ROUTES_FOUND, source.getPath(), line);
 				breakpoint.setMessage(message);
 				LOGGER.warn(message);
 			}
