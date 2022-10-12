@@ -72,17 +72,17 @@ import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	
-	private static final String BREAKPOINT_MESSAGE_EXCEPTION_OCCURED_WHEN_SEARCHING_ID = "%s See logs for more details: %s";
-	private static final String MESSAGE_NO_ACTIVE_ROUTES_FOUND = "No active routes found in Camel context. Consequently, the Camel debugger cannot set breakpoint for %s l.%s";
-	private static final String BASE_MESSAGE_EXCEPTION_WHEN_SEARCHING_FOR_ID = "An exception occurred when searching for the related id for %s l.%s.";
-	private static final String BREAKPOINT_MESSAGE_CANNOT_FIND_ID = "The Camel debugger cannot find the related id for %s l.%s";
+	static final String BREAKPOINT_MESSAGE_EXCEPTION_OCCURED_WHEN_SEARCHING_ID = "%s See logs for more details: %s";
+	static final String MESSAGE_NO_ACTIVE_ROUTES_FOUND = "No active routes found in Camel context. Consequently, the Camel debugger cannot set breakpoint for %s l.%s";
+	static final String BASE_MESSAGE_EXCEPTION_WHEN_SEARCHING_FOR_ID = "An exception occurred when searching for the related id for %s l.%s.";
+	static final String BREAKPOINT_MESSAGE_CANNOT_FIND_ID = "The Camel debugger cannot find the related id for %s l.%s";
 
 	private static final String CAMEL_LANGUAGE_SIMPLE = "simple";
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(CamelDebugAdapterServer.class);
 
 	private volatile IDebugProtocolClient client;
-	private final BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
+	private BacklogDebuggerConnectionManager connectionManager = new BacklogDebuggerConnectionManager();
 
 	private final Map<String, Set<String>> sourceToBreakpointIds = new ConcurrentHashMap<>();
 
@@ -334,6 +334,15 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public BacklogDebuggerConnectionManager getConnectionManager() {
 		return connectionManager;
 	}
+	
+	/**
+	 * Used for test only.
+	 * 
+	 * @param connectionManager
+	 */
+	public void setConnectionManager(BacklogDebuggerConnectionManager connectionManager) {
+		this.connectionManager = connectionManager;
+	}
 
 	@Override
 	public CompletableFuture<Void> configurationDone(ConfigurationDoneArguments args) {
@@ -393,4 +402,6 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			}
 		);
 	}
+
+
 }
