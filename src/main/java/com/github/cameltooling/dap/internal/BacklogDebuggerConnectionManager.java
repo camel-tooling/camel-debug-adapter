@@ -292,6 +292,15 @@ public class BacklogDebuggerConnectionManager {
 	public Document getRoutesDOMDocument() {
 		return routesDOMDocument;
 	}
+	
+	/**
+	 * hThis is provided for testing purpose. This is supposed to be updated internally by this class only.
+	 * 
+	 * @param document
+	 */
+	public void setRoutesDomDocument(Document document) {
+		this.routesDOMDocument = document;
+	}
 
 	public Set<String> getNotifiedSuspendedBreakpointIds() {
 		return notifiedSuspendedBreakpointIds;
