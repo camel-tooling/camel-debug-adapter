@@ -37,7 +37,7 @@ jobs:
         cache: 'maven'
     - name: Build with Maven
       run: mvn -B package
-    - uses: actions/upload-artifact@v2
+    - uses: actions/upload-artifact@v3
       with:
         name: log-camel-dap.log
         path: /tmp/log-camel-dap.log
