@@ -81,6 +81,7 @@ public class BacklogDebuggerConnectionManager {
 	private final Map<String, CamelBreakpoint> camelBreakpointsWithSources = new ConcurrentHashMap<>();
 	
 	private volatile boolean isStepping;
+	private Thread checkSuspendedNodeThread;
 
 	private String getLocalJMXUrl(String javaProcessPID) {
 		try {
@@ -121,7 +122,7 @@ public class BacklogDebuggerConnectionManager {
 				backlogDebugger.enableDebugger();
 				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
 				
-				Thread checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints, "Camel DAP - Check Suspended node");
+				checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints, "Camel DAP - Check Suspended node");
 				checkSuspendedNodeThread.start();
 				return true;
 			} else {
@@ -172,7 +173,7 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	private void checkSuspendedBreakpoints() {
-		while(backlogDebugger != null && backlogDebugger.isEnabled()) {
+		while(!Thread.currentThread().isInterrupted() && backlogDebugger != null && backlogDebugger.isEnabled()) {
 			Set<String> suspendedBreakpointNodeIds = backlogDebugger.suspendedBreakpointNodeIds();
 			for (String nodeId : suspendedBreakpointNodeIds) {
 				handleSuspendedBreakpoint(nodeId);
@@ -264,6 +265,16 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	public void terminate() {
+		if (checkSuspendedNodeThread != null) {
+			checkSuspendedNodeThread.interrupt();
+			try {
+				checkSuspendedNodeThread.join(2000);
+			} catch (InterruptedException e) {
+				LOGGER.warn("Error while waiting for Thread checking for suspended node to finish: {}", e.getMessage());
+				Thread.currentThread().interrupt();
+			}
+		}
+		
 		if (backlogDebugger != null) {
 			try {
 				backlogDebugger.detach();
