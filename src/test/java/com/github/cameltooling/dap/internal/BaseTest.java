@@ -23,6 +23,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
@@ -188,7 +189,8 @@ public abstract class BaseTest {
 
 	protected void awaitAllVariablesFilled(int indexOfAllStacksAndVars, int variablesNumber) {
 		await().untilAsserted(() -> {
-			assertThat(clientProxy.getAllStacksAndVars().get(indexOfAllStacksAndVars).getVariables()).hasSize(variablesNumber);
+			List<Variable> variables = Collections.unmodifiableList(clientProxy.getAllStacksAndVars().get(indexOfAllStacksAndVars).getVariables());
+			assertThat(variables).hasSize(variablesNumber);
 		});
 	}
 
