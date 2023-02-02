@@ -21,6 +21,7 @@ import java.util.Collections;
 import org.apache.camel.CamelContext;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +58,18 @@ class CamelDebugAdapterServerTest extends BaseTest {
 		context.setSourceLocationEnabled(true);
 		startBasicRoute(context);
 		attachWithJMXURL(server, BacklogDebuggerConnectionManager.DEFAULT_JMX_URI);
+		checkConnectionEstablished();
+	}
+	
+	@Test
+	@Disabled("It is not possible to attach a jvm agent to itself. Consequently, not found a way to enable Jolokia in a Unit Test")
+	void testAttachToCamelWithJolokia() throws Exception {
+		context = new DefaultCamelContext();
+
+		// TODO : attach the jvm agent or launch the route in a separated process but how to check/interact with it then?
+		startBasicRoute(context);
+		
+		attachWithJMXURL(server, "service:jmx:jolokia://localhost:8778/jolokia/");
 		checkConnectionEstablished();
 	}
 	
