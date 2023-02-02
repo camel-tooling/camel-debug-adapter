@@ -49,6 +49,7 @@
 		<!-- must be aligned with the one from Camel -->
 		<version.jaxb>4.0.0</version.jaxb>
 		<version.junit.pioneer>2.2.0</version.junit.pioneer>
+		<version-jolokia>2.0.3</version-jolokia>
 	</properties>
 	<build>
 		<plugins>
@@ -187,7 +188,18 @@
 			<version>${version.jaxb}</version>
 			<scope>runtime</scope>
 		</dependency>
-
+		<dependency>
+			<groupId>org.jolokia</groupId>
+			<artifactId>jolokia-client-jmx-adapter</artifactId>
+			<version>${version-jolokia}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jolokia</groupId>
+			<artifactId>jolokia-client-java</artifactId>
+			<version>${version-jolokia}</version>
+			<scope>test</scope>
+		</dependency>
+		
 		<dependency>
 			<groupId>org.junit.jupiter</groupId>
 			<artifactId>junit-jupiter</artifactId>
