@@ -31,7 +31,7 @@ jobs:
         key: ${{ runner.os }}-sonar
         restore-keys: ${{ runner.os }}-sonar
     - name: Build, sign and deploy
-      run: mvn -P sign -B deploy
+      run: mvn -P sign,build-extras -B deploy
       env:
         MAVEN_USERNAME: apupier
         MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
