@@ -16,16 +16,16 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        java: [11, 17, 19]
+        java: [11, 17, 20]
         exclude:
           - os: macos-latest
             java: 17
           - os: macos-latest
-            java: 19
+            java: 20
           - os: windows-latest
             java: 17
           - os: windows-latest
-            java: 19
+            java: 20
 
     steps:
     - uses: actions/checkout@v3
