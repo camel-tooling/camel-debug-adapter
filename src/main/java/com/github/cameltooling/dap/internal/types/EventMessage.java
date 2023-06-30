@@ -17,12 +17,14 @@
 package com.github.cameltooling.dap.internal.types;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 
-import org.apache.camel.api.management.mbean.BacklogTracerEventMessage;
+import org.apache.camel.spi.BacklogTracerEventMessage;
+
 
 @XmlRootElement(name = "backlogTracerEventMessage")
 public class EventMessage implements BacklogTracerEventMessage {
@@ -102,6 +104,26 @@ public class EventMessage implements BacklogTracerEventMessage {
 	}
 	@Override
 	public String toXml(int indent) {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean isRest() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean isTemplate() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getMessageAsJSon() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String toJSon(int indent) {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public Map<String, Object> asJSon() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
 
