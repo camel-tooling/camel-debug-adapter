@@ -20,8 +20,8 @@ import java.io.File;
 import java.io.FileNotFoundException;
 
 import org.apache.camel.CamelContext;
-import org.apache.camel.ExtendedCamelContext;
 import org.apache.camel.spi.Resource;
+import org.apache.camel.support.PluginHelper;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 
 class BasicDebugForXmlTest extends BasicDebugFlowTest {
@@ -30,10 +30,9 @@ class BasicDebugForXmlTest extends BasicDebugFlowTest {
 	
 	@Override
 	protected void registerRouteToTest(CamelContext context, String routeId, String logEndpointId) throws Exception {
-		ExtendedCamelContext ecc = context.adapt(ExtendedCamelContext.class);
-		Resource resource = ecc.getResourceLoader().resolveResource("/basic.xml");
+		Resource resource = PluginHelper.getResourceLoader(context).resolveResource("/basic.xml");
 		routeForTest = new File(resource.getURI());
-		ecc.getRoutesLoader().loadRoutes(resource);
+		PluginHelper.getRoutesLoader(context).loadRoutes(resource);
 	}
 	
 	@Override

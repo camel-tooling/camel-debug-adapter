@@ -252,7 +252,7 @@ public class BacklogDebuggerConnectionManager {
 			ManagedCamelContextMBean camelContext = JMX.newMBeanProxy(connection, mbeanName,
 					ManagedCamelContextMBean.class);
 
-			String routes = camelContext.dumpRoutesAsXml(false, true);
+			String routes = camelContext.dumpRoutesAsXml(false);
 			DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 			dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
 			DocumentBuilder documentBuilder = dbf.newDocumentBuilder();

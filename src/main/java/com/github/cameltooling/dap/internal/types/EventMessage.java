@@ -19,9 +19,9 @@ package com.github.cameltooling.dap.internal.types;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlElementWrapper;
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlElement;
+import jakarta.xml.bind.annotation.XmlElementWrapper;
+import jakarta.xml.bind.annotation.XmlRootElement;
 
 import org.apache.camel.spi.BacklogTracerEventMessage;
 
@@ -124,6 +124,50 @@ public class EventMessage implements BacklogTracerEventMessage {
 	}
 	@Override
 	public Map<String, Object> asJSon() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean isFirst() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean isLast() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getLocation() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getProcessingThreadName() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public long getElapsed() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean isDone() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean isFailed() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public boolean hasException() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getExceptionAsXml() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getExceptionAsJSon() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getEndpointUri() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
 

@@ -16,14 +16,10 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        java: [11, 17, 20]
+        java: [17, 20]
         exclude:
           - os: macos-latest
-            java: 17
-          - os: macos-latest
             java: 20
-          - os: windows-latest
-            java: 17
           - os: windows-latest
             java: 20
 
