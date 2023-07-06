@@ -52,6 +52,8 @@ import org.eclipse.lsp4j.debug.SourceBreakpoint;
 import org.eclipse.lsp4j.debug.StackFrame;
 import org.eclipse.lsp4j.debug.StackTraceArguments;
 import org.eclipse.lsp4j.debug.StackTraceResponse;
+import org.eclipse.lsp4j.debug.StepInArguments;
+import org.eclipse.lsp4j.debug.StepOutArguments;
 import org.eclipse.lsp4j.debug.TerminateArguments;
 import org.eclipse.lsp4j.debug.ThreadsResponse;
 import org.eclipse.lsp4j.debug.Variable;
@@ -296,6 +298,32 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		);
 	}
 	
+	/**
+	 * Can be removed when https://github.com/eclipse-lsp4j/lsp4j/issues/743 is implemented
+	 * (and if specific stepIn is not implemented) 
+	 */
+	@Override
+	public CompletableFuture<Void> stepIn(StepInArguments args) {
+		NextArguments nextArgs = new NextArguments();
+		nextArgs.setThreadId(args.getThreadId());
+		nextArgs.setGranularity(args.getGranularity());
+		nextArgs.setSingleThread(args.getSingleThread());
+		return next(nextArgs);
+	}
+	
+	/**
+	 * Can be removed when https://github.com/eclipse-lsp4j/lsp4j/issues/743 is implemented
+	 * (and if specific stepOut is not implemented) 
+	 */
+	@Override
+	public CompletableFuture<Void> stepOut(StepOutArguments args) {
+		NextArguments nextArgs = new NextArguments();
+		nextArgs.setThreadId(args.getThreadId());
+		nextArgs.setGranularity(args.getGranularity());
+		nextArgs.setSingleThread(args.getSingleThread());
+		return next(nextArgs);
+	}
+	
 	@Override
 	public CompletableFuture<Void> terminate(TerminateArguments args) {
 		return runAsync(connectionManager::terminate);
@@ -330,6 +358,8 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			}
 		);
 	}
+	
+	
 
 	public BacklogDebuggerConnectionManager getConnectionManager() {
 		return connectionManager;
