@@ -261,7 +261,7 @@
 			<dependency>
 				<groupId>net.bytebuddy</groupId>
 				<artifactId>byte-buddy</artifactId>
-				<version>1.14.8</version> <!-- As a workaround, align with version of Mockito which is compatible with Java 21-->
+				<version>1.14.9</version> <!-- As a workaround, align with version of Mockito which is compatible with Java 21-->
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
