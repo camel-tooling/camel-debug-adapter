@@ -18,8 +18,8 @@ package com.github.cameltooling.dap.internal;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
-import org.apache.camel.impl.debugger.BacklogDebugger;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
+import org.apache.camel.spi.BacklogDebugger;
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.junit.jupiter.api.Test;
