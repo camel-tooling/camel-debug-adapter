@@ -48,7 +48,7 @@
 		<version.camel>4.1.0</version.camel>
 		<!-- must be aligned with the one from Camel -->
 		<version.jaxb>4.0.0</version.jaxb>
-		<version.junit.pioneer>2.1.0</version.junit.pioneer>
+		<version.junit.pioneer>2.2.0</version.junit.pioneer>
 	</properties>
 	<build>
 		<plugins>
