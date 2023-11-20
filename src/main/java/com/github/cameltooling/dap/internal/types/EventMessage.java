@@ -16,11 +16,9 @@
  */
 package com.github.cameltooling.dap.internal.types;
 
-import java.util.List;
 import java.util.Map;
 
 import jakarta.xml.bind.annotation.XmlElement;
-import jakarta.xml.bind.annotation.XmlElementWrapper;
 import jakarta.xml.bind.annotation.XmlRootElement;
 
 import org.apache.camel.spi.BacklogTracerEventMessage;
@@ -39,7 +37,6 @@ public class EventMessage implements BacklogTracerEventMessage {
 	private String toNode;
 	private String exchangeId;
 	private Message message;
-	private List<ExchangeProperty> exchangeProperties;
 	
 	@XmlElement(name = "uid")
 	public long getUid() {
@@ -87,15 +84,6 @@ public class EventMessage implements BacklogTracerEventMessage {
 	}
 	public void setMessage(Message message) {
 		this.message = message;
-	}
-	
-	@XmlElementWrapper(name = "exchangeProperties")
-	@XmlElement(name = "exchangeProperty")
-	public List<ExchangeProperty> getExchangeProperties() {
-		return exchangeProperties;
-	}
-	public void setExchangeProperties(List<ExchangeProperty> exchangeProperties) {
-		this.exchangeProperties = exchangeProperties;
 	}
 	
 	@Override

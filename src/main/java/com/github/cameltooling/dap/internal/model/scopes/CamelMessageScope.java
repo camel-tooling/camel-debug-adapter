@@ -28,6 +28,7 @@ import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
+import com.github.cameltooling.dap.internal.model.variables.message.MessageExchangePropertiesVariable;
 import com.github.cameltooling.dap.internal.model.variables.message.MessageHeadersVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
@@ -37,6 +38,7 @@ public class CamelMessageScope extends CamelScope {
 	public static final String NAME = "Message";
 	private MessageBodyCamelVariable messageBody;
 	private MessageHeadersVariable headersVariable;
+	private MessageExchangePropertiesVariable exchangePropertiesVariable;
 
 	public CamelMessageScope(CamelStackFrame stackframe) {
 		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Message@" + stackframe.getName()).hashCode()));
@@ -46,7 +48,7 @@ public class CamelMessageScope extends CamelScope {
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
 		if (variablesReference == getVariablesReference()) {
-			String xml = debugger.dumpTracedMessagesAsXml(getBreakpointId(), true);
+			String xml = debugger.dumpTracedMessagesAsXml(getBreakpointId());
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			if(eventMessage != null) {
 				variables.add(createVariable("Exchange ID", eventMessage.getExchangeId()));
@@ -54,10 +56,15 @@ public class CamelMessageScope extends CamelScope {
 				variables.add(messageBody);
 				headersVariable = new MessageHeadersVariable(variablesReference, eventMessage.getMessage().getHeaders(), getBreakpointId());
 				variables.add(headersVariable);
+				exchangePropertiesVariable = new MessageExchangePropertiesVariable(variablesReference, eventMessage.getMessage().getExchangeProperties(), getBreakpointId());
+				variables.add(getExchangePropertiesVariable());
 			}
 		} else {
 			if (headersVariable != null && variablesReference == headersVariable.getVariablesReference()) {
 				variables.addAll(headersVariable.createVariables());
+			}
+			if (getExchangePropertiesVariable() != null && variablesReference == getExchangePropertiesVariable().getVariablesReference()) {
+				variables.addAll(getExchangePropertiesVariable().createVariables());
 			}
 		}
 		return variables;
@@ -74,14 +81,25 @@ public class CamelMessageScope extends CamelScope {
 			} else {
 				throw new UnsupportedOperationException("Not supported");
 			}
-		} else if (headersVariable == null) {
-			return null;
 		}
-		return headersVariable.setVariableIfInScope(args, debugger);
+		if (headersVariable != null) {
+			SetVariableResponse response = headersVariable.setVariableIfInScope(args, debugger);
+			if (response != null) {
+				return response;
+			}
+		}
+		if (getExchangePropertiesVariable() != null) {
+			return getExchangePropertiesVariable().setVariableIfInScope(args, debugger);
+		}
+		return null;
 	}
 
 	public MessageHeadersVariable getHeadersVariable() {
 		return headersVariable;
+	}
+
+	public MessageExchangePropertiesVariable getExchangePropertiesVariable() {
+		return exchangePropertiesVariable;
 	}
 
 }

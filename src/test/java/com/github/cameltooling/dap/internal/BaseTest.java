@@ -39,9 +39,11 @@ import org.eclipse.lsp4j.debug.TerminateArguments;
 import org.eclipse.lsp4j.debug.TerminatedEventArguments;
 import org.eclipse.lsp4j.debug.Variable;
 import org.junit.jupiter.api.AfterEach;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
+@SetSystemProperty(key = "camel.debug.enabled", value = "true")
 public abstract class BaseTest {
 
 	protected static final int DEFAULT_VARIABLES_NUMBER = 18;

@@ -40,7 +40,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.github.cameltooling.dap.internal.model.scopes.CamelDebuggerScope;
-import com.github.cameltooling.dap.internal.model.scopes.CamelExchangeScope;
 import com.github.cameltooling.dap.internal.model.scopes.CamelMessageScope;
 import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeFilesCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.debugger.BodyIncludeStreamsCamelVariable;
@@ -221,8 +220,8 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		SetVariableArguments args = new SetVariableArguments();
 		args.setName("property1");
 		args.setValue("an updated exchange property");
-		CamelExchangeScope exchangeScope = (CamelExchangeScope) clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelExchangeScope.NAME.equals(scope.getName())).findAny().get();
-		args.setVariablesReference(exchangeScope.getExchangePropertiesVariable().getVariablesReference());
+		CamelMessageScope messageScope = (CamelMessageScope) clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelMessageScope.NAME.equals(scope.getName())).findAny().get();
+		args.setVariablesReference(messageScope.getExchangePropertiesVariable().getVariablesReference());
 
 		
 		SetVariableResponse response = server.setVariable(args).get();
@@ -230,7 +229,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		assertThat(response.getValue()).isEqualTo("an updated exchange property");
 		
 		EventMessage eventMessage = getMessageStateOnNextStep();
-		assertThat(response.getValue()).isEqualTo(eventMessage.getExchangeProperties().get(0).getContent());
+		assertThat(response.getValue()).isEqualTo(eventMessage.getMessage().getExchangeProperties().get(0).getContent());
 	}
 	
 	@Test

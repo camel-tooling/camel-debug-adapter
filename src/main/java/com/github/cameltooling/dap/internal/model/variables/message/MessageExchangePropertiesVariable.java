@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.github.cameltooling.dap.internal.model.variables.exchange;
+package com.github.cameltooling.dap.internal.model.variables.message;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -28,12 +28,15 @@ import org.eclipse.lsp4j.debug.Variable;
 import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.types.ExchangeProperty;
 
-public class ExchangePropertiesVariable extends Variable {
+/**
+ * This is used pre-Camel 4.2 only (not included)
+ */
+public class MessageExchangePropertiesVariable extends Variable {
 	
 	private final List<ExchangeProperty> exchangeProperties;
 	private final String breakpointId;
 
-	public ExchangePropertiesVariable(int parentVariablesReference, List<ExchangeProperty> exchangeProperties, String breakpointId) {
+	public MessageExchangePropertiesVariable(int parentVariablesReference, List<ExchangeProperty> exchangeProperties, String breakpointId) {
 		this.exchangeProperties = exchangeProperties;
 		this.breakpointId = breakpointId;
 		setName("Properties");
@@ -46,7 +49,7 @@ public class ExchangePropertiesVariable extends Variable {
 		Collection<Variable> variables = new ArrayList<>();
 		if (exchangeProperties != null) {
 			for (ExchangeProperty exchangeProperty : exchangeProperties) {
-				variables.add(createVariable(exchangeProperty.getName(), exchangeProperty.getContent()));
+				variables.add(createVariable(exchangeProperty.getKey(), exchangeProperty.getContent()));
 			}
 		}
 		return variables;
@@ -64,7 +67,7 @@ public class ExchangePropertiesVariable extends Variable {
 			debugger.setExchangePropertyOnBreakpoint(breakpointId, args.getName(), args.getValue());
 			if (exchangeProperties != null) {
 				for (ExchangeProperty exchangeProperty : exchangeProperties) {
-					if (exchangeProperty.getName().equals(args.getName())) {
+					if (exchangeProperty.getKey().equals(args.getName())) {
 						exchangeProperty.setContent(args.getValue());
 					}
 				}

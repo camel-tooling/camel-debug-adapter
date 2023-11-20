@@ -27,14 +27,12 @@ import org.eclipse.lsp4j.debug.Variable;
 import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
-import com.github.cameltooling.dap.internal.model.variables.exchange.ExchangePropertiesVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 public class CamelExchangeScope extends CamelScope {
 	
 	public static final String NAME = "Exchange";
-	private ExchangePropertiesVariable exchangeVariable;
 
 	public CamelExchangeScope(CamelStackFrame stackframe) {
 		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Exchange@" + stackframe.getName()).hashCode()));
@@ -44,18 +42,12 @@ public class CamelExchangeScope extends CamelScope {
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
 		if (variablesReference == getVariablesReference()) {
-			String xml = debugger.dumpTracedMessagesAsXml(getBreakpointId(), true);
+			String xml = debugger.dumpTracedMessagesAsXml(getBreakpointId());
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			if (eventMessage != null) {
 				variables.add(createVariable("ID", eventMessage.getExchangeId()));
 				variables.add(createVariable("To node", eventMessage.getToNode()));
 				variables.add(createVariable("Route ID", eventMessage.getRouteId()));
-				exchangeVariable = new ExchangePropertiesVariable(variablesReference, eventMessage.getExchangeProperties(), getBreakpointId());
-				variables.add(exchangeVariable);
-			}
-		} else {
-			if (exchangeVariable != null && variablesReference == exchangeVariable.getVariablesReference()) {
-				variables.addAll(exchangeVariable.createVariables());
 			}
 		}
 		return variables;
@@ -63,16 +55,6 @@ public class CamelExchangeScope extends CamelScope {
 
 	@Override
 	public SetVariableResponse setVariableIfInScope(SetVariableArguments args, ManagedBacklogDebuggerMBean backlogDebugger) {
-		if (getVariablesReference() == args.getVariablesReference()) {
-			throw new UnsupportedOperationException("Not supported");
-		} else if (exchangeVariable == null) {
-			return null;
-		}
-		return exchangeVariable.setVariableIfInScope(args, backlogDebugger);
+		throw new UnsupportedOperationException("Not supported");
 	}
-
-	public ExchangePropertiesVariable getExchangePropertiesVariable() {
-		return exchangeVariable;
-	}
-
 }
