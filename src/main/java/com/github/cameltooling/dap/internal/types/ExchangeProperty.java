@@ -27,17 +27,17 @@ public class ExchangeProperty implements Serializable {
 	
 	private static final long serialVersionUID = 7994857995065989510L;
 	
-	private String name;
+	private String key;
 	private String type;
 	private String content;
 	
-	@XmlAttribute(name = "name")
-	public String getName() {
-		return name;
+	@XmlAttribute(name = "key")
+	public String getKey() {
+		return key;
 	}
 	
-	public void setName(String name) {
-		this.name = name;
+	public void setKey(String key) {
+		this.key = key;
 	}
 	
 	@XmlAttribute(name = "type")

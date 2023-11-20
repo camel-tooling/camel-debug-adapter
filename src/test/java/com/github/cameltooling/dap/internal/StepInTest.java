@@ -35,6 +35,7 @@ class StepInTest extends BaseTest {
 	@Test
 	void testStepInRouteRedirectToNext() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {

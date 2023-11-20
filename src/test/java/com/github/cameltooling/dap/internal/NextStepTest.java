@@ -35,6 +35,7 @@ class NextStepTest extends BaseTest {
 	@Test
 	void testSteppingInsideRoute() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {
@@ -88,6 +89,7 @@ class NextStepTest extends BaseTest {
 	@Test
 	void testSteppingAtEndOfRoute() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {
@@ -133,6 +135,7 @@ class NextStepTest extends BaseTest {
 	@Test
 	void testSteppingWithExistingBreakpoint() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {

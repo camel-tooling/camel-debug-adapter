@@ -34,6 +34,7 @@ class ResumeSingleThreadTest extends BaseTest {
 	@Test
 	void testResume() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId1 = "a-route-id-1";
 		String startEndpointUri1 = "direct:testResume1";
 		String routeId2 = "a-route-id-2";

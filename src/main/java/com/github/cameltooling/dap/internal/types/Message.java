@@ -32,6 +32,7 @@ public class Message implements Serializable {
 	private String exchangeId;
 	private List<Header> headers;
 	private String body;
+	private List<ExchangeProperty> exchangeProperties;
 	
 	@XmlAttribute(name = "exchangeId")
 	public String getExchangeId() {
@@ -59,5 +60,14 @@ public class Message implements Serializable {
 
 	public void setBody(String body) {
 		this.body = body;
+	}
+	
+	@XmlElementWrapper(name = "exchangeProperties")
+	@XmlElement(name = "exchangeProperty")
+	public List<ExchangeProperty> getExchangeProperties() {
+		return exchangeProperties;
+	}
+	public void setExchangeProperties(List<ExchangeProperty> exchangeProperties) {
+		this.exchangeProperties = exchangeProperties;
 	}
 }

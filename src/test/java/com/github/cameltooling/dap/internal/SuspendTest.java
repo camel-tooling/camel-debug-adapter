@@ -36,6 +36,7 @@ class SuspendTest extends BaseTest {
 	@SetSystemProperty(key = BacklogDebugger.SUSPEND_MODE_SYSTEM_PROP_NAME, value = "true")
 	void testOnSuspendModeEnabled() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {
@@ -68,6 +69,7 @@ class SuspendTest extends BaseTest {
 	@SetSystemProperty(key = BacklogDebugger.SUSPEND_MODE_SYSTEM_PROP_NAME, value = "false")
 	void testOnSuspendModeDisabled() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {

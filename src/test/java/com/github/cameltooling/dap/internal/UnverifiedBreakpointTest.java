@@ -97,6 +97,7 @@ class UnverifiedBreakpointTest extends BaseTest {
 	
 	private SetBreakpointsArguments startWithBreakpoint(String breakpoint) throws Exception, FileNotFoundException {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		registerRouteToTest(context);
 		context.start();
 		assertThat(context.isStarted()).isTrue();

@@ -42,9 +42,10 @@ import org.junit.jupiter.api.AfterEach;
 
 import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
+//@SetSystemProperty(key = "camel.debug.enabled", value = "true")
 public abstract class BaseTest {
 
-	protected static final int DEFAULT_VARIABLES_NUMBER = 18;
+	protected static final int DEFAULT_VARIABLES_NUMBER = 16;
 	protected CamelDebugAdapterServer server;
 	protected DummyCamelDebugClient clientProxy;
 	protected CamelContext context;

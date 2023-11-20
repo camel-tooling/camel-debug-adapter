@@ -39,6 +39,7 @@ class ConditionalBreakpointTest extends BaseTest {
 	@Test
 	void testCondition() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testConditionalBreakpoint";
 		context.addRoutes(new RouteBuilder() {
