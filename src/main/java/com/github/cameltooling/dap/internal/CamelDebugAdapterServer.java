@@ -16,6 +16,7 @@
  */
 package com.github.cameltooling.dap.internal;
 
+import java.io.StringWriter;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -25,6 +26,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.TransformerFactoryConfigurationError;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
@@ -142,6 +151,27 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			breakpoints[i] = breakpoint;
 			Document routesDOMDocument = connectionManager.getRoutesDOMDocument();
 			if (routesDOMDocument != null) {
+
+
+Transformer transformer;
+try {
+	transformer = TransformerFactory.newInstance().newTransformer();
+	transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+	transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+// initialize StreamResult with File object to save to file
+	StreamResult result = new StreamResult(new StringWriter());
+	DOMSource sourceDom = new DOMSource(routesDOMDocument);
+	transformer.transform(sourceDom, result);
+	String xmlString = result.getWriter().toString();
+	System.out.println(xmlString);
+} catch (TransformerConfigurationException | TransformerFactoryConfigurationError e) {
+	// TODO Auto-generated catch block
+	e.printStackTrace();
+} catch (TransformerException e) {
+	// TODO Auto-generated catch block
+	e.printStackTrace();
+}
+
 				String path = "//*[@sourceLineNumber='" + line + "']";
 				//TODO: take care of sourceLocation and not only line number
 				// "//*[@sourceLocation='" + sourceLocation + "' and @sourceLineNumber='" + line + "']";
