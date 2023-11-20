@@ -35,6 +35,7 @@ class StepOutTest extends BaseTest {
 	@Test
 	void testStepOutRouteRedirectToNext() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {

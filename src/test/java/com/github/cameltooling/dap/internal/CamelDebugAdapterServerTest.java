@@ -36,6 +36,7 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	@Test
 	void testAttachToCamelWithPid() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		startBasicRoute(context);
 		attachWithPid(server);
 		checkConnectionEstablished();
@@ -44,6 +45,7 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	@Test
 	void testAttachToCamelWithDefaultJMX() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		startBasicRoute(context);
 		attach(server);
 		checkConnectionEstablished();
@@ -52,6 +54,7 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	@Test
 	void testAttachToCamelWithProvidedJMXURL() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		startBasicRoute(context);
 		attachWithJMXURL(server, BacklogDebuggerConnectionManager.DEFAULT_JMX_URI);
 		checkConnectionEstablished();
@@ -60,6 +63,7 @@ class CamelDebugAdapterServerTest extends BaseTest {
 	@Test
 	void testFailToAttach() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		startBasicRoute(context);
 		server.attach(Collections.singletonMap(BacklogDebuggerConnectionManager.ATTACH_PARAM_JMX_URL, "invalidUrl")).get();
 		assertThat(clientProxy.getOutputEventArguments().get(0).getOutput()).contains("Please check that the Camel application under debug has the following requirements:");

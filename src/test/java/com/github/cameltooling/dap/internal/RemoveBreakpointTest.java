@@ -34,6 +34,7 @@ class RemoveBreakpointTest extends BaseTest {
 	@Test
 	void testRemoveOneBreakpoint() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String fromUri = "direct:testRemoveBreakpoint";
 		context.addRoutes(new RouteBuilder() {
 

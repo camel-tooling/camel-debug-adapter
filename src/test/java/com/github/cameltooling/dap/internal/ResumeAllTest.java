@@ -36,6 +36,7 @@ class ResumeAllTest extends BaseTest {
 	@Test
 	void testResumeAndSecondBreakpointHitOfAnotherRouteInstance() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {
@@ -93,6 +94,7 @@ class ResumeAllTest extends BaseTest {
 	@Test
 	void testResumeAndSecondBreakpointHitOnSameRouteInstance() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String routeId = "a-route-id";
 		String startEndpointUri = "direct:testResume";
 		context.addRoutes(new RouteBuilder() {

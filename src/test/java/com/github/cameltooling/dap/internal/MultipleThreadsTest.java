@@ -35,6 +35,7 @@ class MultipleThreadsTest extends BaseTest {
 	@Test
 	void test2SuspendedBreakpointsCreates2Threads() throws Exception {
 		context = new DefaultCamelContext();
+		context.setSourceLocationEnabled(true);
 		String startEndpointUri1 = "direct:testThreads1";
 		String startEndpointUri2 = "direct:testThreads2";
 		context.addRoutes(new RouteBuilder() {

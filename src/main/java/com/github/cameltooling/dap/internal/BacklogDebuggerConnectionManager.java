@@ -119,6 +119,12 @@ public class BacklogDebuggerConnectionManager {
 				ObjectName debuggerMBeanObjectName = names.iterator().next();
 				backlogDebugger = JMX.newMBeanProxy(mbeanConnection, debuggerMBeanObjectName,
 						ManagedBacklogDebuggerMBean.class);
+				try {
+					backlogDebugger.setIncludeExchangeProperties(true);
+				} catch(Exception ex) {
+					// Ignore, we might be connected to pre 4.2 Camel version
+					System.out.println(ex);
+				}
 				backlogDebugger.enableDebugger();
 				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
 				
@@ -194,7 +200,7 @@ public class BacklogDebuggerConnectionManager {
 		if (!isStepping && !notifiedSuspendedBreakpointIds.contains(nodeId)) {
 			StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
 			stoppedEventArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT);
-			String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId, true);
+			String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId);
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
 			if(thread.isEmpty()) {
