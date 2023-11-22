@@ -42,7 +42,8 @@ public class CamelExchangeScope extends CamelScope {
 	public Set<Variable> createVariables(int variablesReference, ManagedBacklogDebuggerMBean debugger) {
 		Set<Variable> variables = new HashSet<>();
 		if (variablesReference == getVariablesReference()) {
-			String xml = debugger.dumpTracedMessagesAsXml(getBreakpointId());
+			// Keep using deprecated method to have it still working with 4.1-
+			String xml = debugger.dumpTracedMessagesAsXml(getBreakpointId(), true);
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			if (eventMessage != null) {
 				variables.add(createVariable("ID", eventMessage.getExchangeId()));
