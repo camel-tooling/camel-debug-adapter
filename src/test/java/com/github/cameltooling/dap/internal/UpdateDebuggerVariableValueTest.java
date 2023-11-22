@@ -262,7 +262,8 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		waitBreakpointNotification(2);
 		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT);
 		
-		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID);
+		// Keep using deprecated method to have it still working with 4.1-
+		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, true);
 		EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(messagesAsXml);
 		return eventMessage;
 	}

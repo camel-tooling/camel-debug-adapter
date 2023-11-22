@@ -200,7 +200,8 @@ public class BacklogDebuggerConnectionManager {
 		if (!isStepping && !notifiedSuspendedBreakpointIds.contains(nodeId)) {
 			StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
 			stoppedEventArgs.setReason(StoppedEventArgumentsReason.BREAKPOINT);
-			String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId);
+			// Keep using deprecated method to have it still working with 4.1- 
+			String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId, true);
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
 			Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
 			if(thread.isEmpty()) {
