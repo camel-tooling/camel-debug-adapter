@@ -35,7 +35,7 @@ jobs:
       run: mvn -B package
     - uses: actions/upload-artifact@v4
       with:
-        name: log-camel-dap.log
+        name: log-camel-dap-${{ matrix.java }}.log
         path: /tmp/log-camel-dap.log
         if-no-files-found: error
       if: ${{ always() && runner.os == 'Linux' }}
