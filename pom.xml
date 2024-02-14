@@ -159,7 +159,7 @@
 		<dependency>
 			<groupId>org.eclipse.lsp4j</groupId>
 			<artifactId>org.eclipse.lsp4j.debug</artifactId>
-			<version>0.21.2</version>
+			<version>0.22.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.camel</groupId>
