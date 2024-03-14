@@ -32,6 +32,12 @@ To test with the Client integration of Eclipse IDE:
   }
   ```
   - Click `Debug`
+- Connect Remote Java Application to debug Camel DAP server project
+  - Create a `Remote Java Application` configuration
+  - In `project` field, set `camel-dap-server`
+  - In `port` field, set `3000`
+  - Select `Allow termination of remote VM`
+  - Click `Debug`
 - You can now set breakpoints in textual Camel route definition and Camel Debug Adapter project
 
 # How to release
