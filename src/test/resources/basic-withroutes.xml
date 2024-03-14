@@ -16,6 +16,12 @@
 		<setProperty name="property2">
 			<constant>value of property 2</constant>
 		</setProperty>
+		<setVariable name="var1">
+			<constant>value of variable 1</constant>
+		</setVariable>
+		<setVariable name="var2">
+			<constant>value of variable 2</constant>
+		</setVariable>
 		<log message="Log From Test" id="testBasicFlow-log-id" /> <!-- XXX-breakpoint-XXX -->
 	</route>
 </routes>

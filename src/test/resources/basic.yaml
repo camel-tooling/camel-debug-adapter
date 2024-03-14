@@ -20,6 +20,14 @@
             name: property2
             expression:
               constant: value of property 2
+        - setVariable:
+            name: var1
+            expression:
+              constant: value of variable 1
+        - setVariable:
+            name: var2
+            expression:
+              constant: value of variable 2
         - to: # XXX-breakpoint-XXX
             uri: log:Log From Test
             id: testBasicFlow-log-id

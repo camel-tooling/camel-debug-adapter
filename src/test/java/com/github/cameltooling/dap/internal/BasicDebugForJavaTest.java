@@ -36,6 +36,8 @@ public class BasicDebugForJavaTest extends BasicDebugFlowTest {
 					.setHeader("header2", constant("value of header 2"))
 					.setProperty("property1", constant("value of property 1"))
 					.setProperty("property2", constant("value of property 2"))
+					.setVariable("var1", constant("value of variable 1"))
+					.setVariable("var2", constant("value of variable 2"))
 					.log("Log from test").id(logEndpointId); // XXX-breakpoint-XXX
 			}
 		});

@@ -29,6 +29,7 @@ import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
 import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
 import com.github.cameltooling.dap.internal.model.variables.message.MessageExchangePropertiesVariable;
+import com.github.cameltooling.dap.internal.model.variables.message.MessageExchangeVariablesVariable;
 import com.github.cameltooling.dap.internal.model.variables.message.MessageHeadersVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
@@ -39,6 +40,7 @@ public class CamelMessageScope extends CamelScope {
 	private MessageBodyCamelVariable messageBody;
 	private MessageHeadersVariable headersVariable;
 	private MessageExchangePropertiesVariable exchangePropertiesVariable;
+	private MessageExchangeVariablesVariable exchangeVariablesVariable;
 
 	public CamelMessageScope(CamelStackFrame stackframe) {
 		super(NAME, stackframe.getName(), IdUtils.getPositiveIntFromHashCode((stackframe.getId()+"@Message@" + stackframe.getName()).hashCode()));
@@ -59,6 +61,8 @@ public class CamelMessageScope extends CamelScope {
 				variables.add(headersVariable);
 				exchangePropertiesVariable = new MessageExchangePropertiesVariable(variablesReference, eventMessage.getMessage().getExchangeProperties(), getBreakpointId());
 				variables.add(getExchangePropertiesVariable());
+				exchangeVariablesVariable = new MessageExchangeVariablesVariable(variablesReference, eventMessage.getMessage().getExchangeVariables());
+				variables.add(getExchangeVariablesVariable());
 			}
 		} else {
 			if (headersVariable != null && variablesReference == headersVariable.getVariablesReference()) {
@@ -66,6 +70,9 @@ public class CamelMessageScope extends CamelScope {
 			}
 			if (getExchangePropertiesVariable() != null && variablesReference == getExchangePropertiesVariable().getVariablesReference()) {
 				variables.addAll(getExchangePropertiesVariable().createVariables());
+			}
+			if (getExchangeVariablesVariable() != null && variablesReference == getExchangeVariablesVariable().getVariablesReference()) {
+				variables.addAll(getExchangeVariablesVariable().createVariables());
 			}
 		}
 		return variables;
@@ -101,6 +108,10 @@ public class CamelMessageScope extends CamelScope {
 
 	public MessageExchangePropertiesVariable getExchangePropertiesVariable() {
 		return exchangePropertiesVariable;
+	}
+
+	public MessageExchangeVariablesVariable getExchangeVariablesVariable() {
+		return exchangeVariablesVariable;
 	}
 
 }

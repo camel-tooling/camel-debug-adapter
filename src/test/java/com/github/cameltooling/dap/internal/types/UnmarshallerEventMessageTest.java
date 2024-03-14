@@ -51,6 +51,10 @@ class UnmarshallerEventMessageTest {
       <header key="header1" type="java.lang.String">value of header 1</header>
       <header key="header2" type="java.lang.String">value of header 2</header>
     </headers>
+    <exchangeVariables>
+      <exchangeVariable key="var1" type="java.lang.String">value of variable 1</exchangeVariable>
+      <exchangeVariable key="var2" type="java.lang.String">value of variable 2</exchangeVariable>
+    </exchangeVariables>
     <body type="java.lang.String">a body for test</body>
   </message>
 </backlogTracerEventMessage>
@@ -60,6 +64,7 @@ class UnmarshallerEventMessageTest {
 		assertThat(message.getUid()).isEqualTo(1);
 		assertThat(message.getMessage().getHeaders()).hasSize(2);
 		assertThat(message.getMessage().getExchangeProperties()).hasSize(3);
+		assertThat(message.getMessage().getExchangeVariables()).hasSize(2);
 		assertThat(message.getMessage().getBody()).isEqualTo("a body for test");
 	}
 
