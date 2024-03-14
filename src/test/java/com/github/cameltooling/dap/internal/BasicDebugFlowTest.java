@@ -98,7 +98,7 @@ abstract class BasicDebugFlowTest extends BaseTest {
 		await().untilAsserted(() -> assertThat(stackAndData.getScopes()).hasSize(5));
 		await("handling of stop event response is finished")
 			.atMost(Duration.ofSeconds(60))
-			.untilAsserted(() -> assertThat(stackAndData.getVariables()).hasSize(21));
+			.untilAsserted(() -> assertThat(stackAndData.getVariables()).hasSize(24));
 		ManagedBacklogDebuggerMBean debugger = server.getConnectionManager().getBacklogDebugger();
 		List<Variable> variables = stackAndData.getVariables();
 		assertThat(variables)
@@ -115,7 +115,9 @@ abstract class BasicDebugFlowTest extends BaseTest {
 				createVariable("header1", "value of header 1"),
 				createVariable("header2", "value of header 2"),
 				createVariable("property1", "value of property 1"),
-				createVariable("property2", "value of property 2"));
+				createVariable("property2", "value of property 2"),
+				createVariable("var1", "value of variable 1"),
+				createVariable("var2", "value of variable 2"));
 
 		assertThat(variables.stream().map(var -> var.getValue()))
 			.as("All variables must have a non-null values due to limitation in VS Code implementation, see https://github.com/microsoft/vscode/issues/141544")

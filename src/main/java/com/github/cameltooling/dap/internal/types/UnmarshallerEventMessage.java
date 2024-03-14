@@ -31,7 +31,7 @@ public class UnmarshallerEventMessage {
 
 	public EventMessage getUnmarshalledEventMessage(String xmlDump) {
 		try {
-			JAXBContext context = JAXBContext.newInstance(EventMessage.class, Message.class, Header.class, ExchangeProperty.class);
+			JAXBContext context = JAXBContext.newInstance(EventMessage.class, Message.class, Header.class, ExchangeProperty.class, ExchangeVariable.class);
 			Unmarshaller um = context.createUnmarshaller();
 			return (EventMessage)um.unmarshal(new StringReader(xmlDump));
 		} catch (JAXBException ex) {

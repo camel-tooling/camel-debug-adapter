@@ -125,6 +125,12 @@ public class BacklogDebuggerConnectionManager {
 					// Ignore, we might be connected to pre 4.2 Camel version
 					System.out.println(ex);
 				}
+				try {
+					backlogDebugger.setIncludeExchangeVariables(true);
+				} catch(Exception ex) {
+					// Ignore, we might be connected to pre 4.4 Camel version
+					System.out.println(ex);
+				}
 				backlogDebugger.enableDebugger();
 				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
 				
