@@ -39,7 +39,9 @@ public class CamelStackFrame extends StackFrame {
 		setId(frameId);
 		setName(breakpointId);
 		setSource(source);
-		setLine(line);
+		if (line !=null) {
+			setLine(line);
+		}
 	}
 	
 	public Set<CamelScope> createScopes() {

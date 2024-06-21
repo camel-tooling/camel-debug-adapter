@@ -93,7 +93,7 @@ abstract class BasicDebugFlowTest extends BaseTest {
 
 		assertThat(clientProxy.getAllStacksAndVars()).hasSize(1);
 		StackAndVarOnStopEvent stackAndData = clientProxy.getAllStacksAndVars().get(0);
-		await().untilAsserted(() -> assertThat(stackAndData.getThreads()).hasSize(1));
+		await().untilAsserted(() -> assertThat(stackAndData.getThreads()).hasSize(2));
 		await().untilAsserted(() -> assertThat(stackAndData.getStackFrames()).hasSize(1));
 		await().untilAsserted(() -> assertThat(stackAndData.getScopes()).hasSize(5));
 		await("handling of stop event response is finished")

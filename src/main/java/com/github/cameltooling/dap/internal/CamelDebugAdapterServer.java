@@ -40,6 +40,7 @@ import org.eclipse.lsp4j.debug.InitializeRequestArguments;
 import org.eclipse.lsp4j.debug.NextArguments;
 import org.eclipse.lsp4j.debug.OutputEventArguments;
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
+import org.eclipse.lsp4j.debug.PauseArguments;
 import org.eclipse.lsp4j.debug.Scope;
 import org.eclipse.lsp4j.debug.ScopesArguments;
 import org.eclipse.lsp4j.debug.ScopesResponse;
@@ -69,7 +70,7 @@ import org.w3c.dom.Node;
 import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
 import com.github.cameltooling.dap.internal.model.CamelScope;
 import com.github.cameltooling.dap.internal.model.CamelStackFrame;
-import com.github.cameltooling.dap.internal.model.CamelThread;
+import com.github.cameltooling.dap.internal.model.CamelExchangeThread;
 import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 
 public class CamelDebugAdapterServer implements IDebugProtocolServer {
@@ -198,9 +199,10 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<ThreadsResponse> threads() {
 		return supplyAsync(
 			() -> {
-				Set<CamelThread> threads = connectionManager.getCamelThreads();
+				Set<org.eclipse.lsp4j.debug.Thread> threads = connectionManager.getAllThreads();
 				ThreadsResponse value = new ThreadsResponse();
-				value.setThreads(threads.toArray(new CamelThread[0]));
+				value.setThreads(threads.toArray(new org.eclipse.lsp4j.debug.Thread[0]));
+				LOGGER.error("there are " + threads.size() + " threads");
 				return value;
 			}
 		);
@@ -210,11 +212,11 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<StackTraceResponse> stackTrace(StackTraceArguments args) {
 		return supplyAsync(
 			() -> {
-				Set<CamelThread> camelThreads = connectionManager.getCamelThreads();
-				Optional<CamelThread> camelThreadOptional = camelThreads.stream().filter(camelThread -> camelThread.getId() == args.getThreadId()).findAny();
+				Set<CamelExchangeThread> camelThreads = connectionManager.getCamelExchangeThreads();
+				Optional<CamelExchangeThread> camelThreadOptional = camelThreads.stream().filter(camelThread -> camelThread.getId() == args.getThreadId()).findAny();
 				Set<StackFrame> stackFrames = new HashSet<>();
 				if (camelThreadOptional.isPresent()) {
-					CamelThread camelThread = camelThreadOptional.get();
+					CamelExchangeThread camelThread = camelThreadOptional.get();
 					stackFrames.add(camelThread.getStackFrame());
 				}
 				StackTraceResponse response = new StackTraceResponse();
@@ -228,8 +230,8 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<ScopesResponse> scopes(ScopesArguments args) {
 		return supplyAsync(
 			() -> {
-				Optional<CamelStackFrame> camelStackFrameOptional = connectionManager.getCamelThreads().stream()
-					.map(CamelThread::getStackFrame)
+				Optional<CamelStackFrame> camelStackFrameOptional = connectionManager.getCamelExchangeThreads().stream()
+					.map(CamelExchangeThread::getStackFrame)
 					.filter(stackFrame -> args.getFrameId() == stackFrame.getId())
 					.findAny();
 				Set<CamelScope> scopes = new HashSet<>();
@@ -249,7 +251,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 			() -> {
 				Set<Variable> variables = new HashSet<>();
 				ManagedBacklogDebuggerMBean debugger = connectionManager.getBacklogDebugger();
-				for (CamelThread camelThread : connectionManager.getCamelThreads()) {
+				for (CamelExchangeThread camelThread : connectionManager.getCamelExchangeThreads()) {
 					variables.addAll(camelThread.createVariables(args.getVariablesReference(), debugger));
 				}
 				VariablesResponse response = new VariablesResponse();
@@ -260,6 +262,11 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	}
 
 	@Override
+	public CompletableFuture<Void> pause(PauseArguments args) {
+		return runAsync(() -> connectionManager.suspend(args));
+	}
+
+	@Override
 	public CompletableFuture<ContinueResponse> continue_(ContinueArguments args) {
 		return supplyAsync(
 			() -> {
@@ -267,9 +274,9 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				int threadId = args.getThreadId();
 				if (threadId != 0) {
 					response.setAllThreadsContinued(Boolean.FALSE);
-					Optional<CamelThread> findAny = findThread(threadId);
+					Optional<org.eclipse.lsp4j.debug.Thread> findAny = findThread(threadId);
 					if (findAny.isPresent()) {
-						CamelThread camelThread = findAny.get();
+						org.eclipse.lsp4j.debug.Thread camelThread = findAny.get();
 						connectionManager.resume(camelThread);
 					}
 				} else {
@@ -281,17 +288,17 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 		);
 	}
 
-	private Optional<CamelThread> findThread(int threadId) {
-		return connectionManager.getCamelThreads().stream().filter(camelThread -> camelThread.getId() == threadId).findAny();
+	private Optional<org.eclipse.lsp4j.debug.Thread> findThread(int threadId) {
+		return connectionManager.getAllThreads().stream().filter(camelThread -> camelThread.getId() == threadId).findAny();
 	}
 	
 	@Override
 	public CompletableFuture<Void> next(NextArguments args) {
 		return runAsync(
 			() -> {
-				Optional<CamelThread> findAny = findThread(args.getThreadId());
+				Optional<org.eclipse.lsp4j.debug.Thread> findAny = findThread(args.getThreadId());
 				if (findAny.isPresent()) {
-					CamelThread camelThread = findAny.get();
+					org.eclipse.lsp4j.debug.Thread camelThread = findAny.get();
 					connectionManager.next(camelThread);
 				}
 			}
@@ -338,7 +345,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 	public CompletableFuture<SetVariableResponse> setVariable(SetVariableArguments args) {
 		return supplyAsync(
 			() -> {
-				for(CamelThread thread : connectionManager.getCamelThreads()) {
+				for(CamelExchangeThread thread : connectionManager.getCamelExchangeThreads()) {
 					for(CamelScope scope : thread.getStackFrame().getScopes()) {
 						try {
 							SetVariableResponse response = scope.setVariableIfInScope(args, connectionManager.getBacklogDebugger());

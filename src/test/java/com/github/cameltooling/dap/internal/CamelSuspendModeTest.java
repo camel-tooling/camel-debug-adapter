@@ -30,7 +30,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * A test ensuring that message processing can be suspended.
  */
-class SuspendTest extends BaseTest {
+class CamelSuspendModeTest extends BaseTest {
 
 	@Test
 	@SetSystemProperty(key = BacklogDebugger.SUSPEND_MODE_SYSTEM_PROP_NAME, value = "true")

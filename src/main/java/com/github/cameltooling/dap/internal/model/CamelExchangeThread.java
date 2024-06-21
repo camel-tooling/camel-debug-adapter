@@ -27,13 +27,13 @@ import org.eclipse.lsp4j.debug.Variable;
 import com.github.cameltooling.dap.internal.IdUtils;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 
-public class CamelThread extends Thread {
+public class CamelExchangeThread extends Thread {
 
 	private final String breakpointId;
 	private final CamelStackFrame stackFrame;
 	private final EventMessage eventMessage;
 
-	public CamelThread(int threadId, String breakpointId, EventMessage eventMessage, CamelBreakpoint camelBreakpoint) {
+	public CamelExchangeThread(int threadId, String breakpointId, EventMessage eventMessage, CamelBreakpoint camelBreakpoint) {
 		setId(threadId);
 		setName(eventMessage.getExchangeId());
 		this.breakpointId = breakpointId;
@@ -57,7 +57,7 @@ public class CamelThread extends Thread {
 		if (!super.equals(obj)) {
 			return false;
 		}
-		CamelThread that = (CamelThread) obj;
+		CamelExchangeThread that = (CamelExchangeThread) obj;
 		return Objects.equals(this.breakpointId, that.breakpointId)
 				&& Objects.equals(this.eventMessage, that.eventMessage)
 				&& Objects.equals(this.stackFrame, that.stackFrame);
