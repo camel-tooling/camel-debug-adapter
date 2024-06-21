@@ -19,6 +19,7 @@ package com.github.cameltooling.dap.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
@@ -28,7 +29,10 @@ import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.StepInArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.eclipse.lsp4j.debug.Thread;
 import org.junit.jupiter.api.Test;
+
+import com.github.cameltooling.dap.internal.model.CamelExchangeThread;
 
 class StepInTest extends BaseTest {
 	
@@ -83,7 +87,8 @@ class StepInTest extends BaseTest {
 
 		waitRouteIsDone(asyncSendBody);
 
-		assertThat(server.threads().get().getThreads()).isEmpty();
+		Thread[] threads = server.threads().get().getThreads();
+		assertThat(Stream.of(threads)).doesNotHaveAnyElementsOfTypes(CamelExchangeThread.class);
 	}
 
 }

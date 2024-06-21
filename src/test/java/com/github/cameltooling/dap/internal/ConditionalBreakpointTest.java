@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
@@ -31,7 +32,10 @@ import org.eclipse.lsp4j.debug.Source;
 import org.eclipse.lsp4j.debug.SourceBreakpoint;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.eclipse.lsp4j.debug.Thread;
 import org.junit.jupiter.api.Test;
+
+import com.github.cameltooling.dap.internal.model.CamelExchangeThread;
 
 class ConditionalBreakpointTest extends BaseTest {
 
@@ -76,7 +80,8 @@ class ConditionalBreakpointTest extends BaseTest {
 
 		waitRouteIsDone(asyncSendBody2);
 
-		assertThat(server.threads().get().getThreads()).isEmpty();
+		Thread[] threads = server.threads().get().getThreads();
+		assertThat(Stream.of(threads)).doesNotHaveAnyElementsOfTypes(CamelExchangeThread.class);
 	}
 	
 	

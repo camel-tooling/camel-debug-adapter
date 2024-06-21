@@ -17,12 +17,14 @@
 package com.github.cameltooling.dap.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.camel.impl.engine.DefaultProducerTemplate;
+import org.awaitility.Awaitility;
 import org.eclipse.lsp4j.debug.ContinueArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
@@ -59,6 +61,8 @@ class MultipleThreadsTest extends BaseTest {
 
 		producerTemplate = DefaultProducerTemplate.newInstance(context, startEndpointUri1);
 		producerTemplate.start();
+		
+		await("Threads for route definition started").untilAsserted(() -> assertThat(clientProxy.getThreadEventArgumentss()).hasSize(2));
 
 		CompletableFuture<Object> asyncSendBody1 = producerTemplate.asyncSendBody(startEndpointUri1, "a body 1");
 		CompletableFuture<Object> asyncSendBody2 = producerTemplate.asyncSendBody(startEndpointUri2, "a body 2");
@@ -68,8 +72,8 @@ class MultipleThreadsTest extends BaseTest {
 		awaitAllVariablesFilled(1, 2*DEFAULT_VARIABLES_NUMBER);
 		StoppedEventArguments stoppedEventArgument1 = clientProxy.getStoppedEventArguments().get(0);
 		assertThat(stoppedEventArgument1.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
-		assertThat(clientProxy.getThreadEventArgumentss()).hasSize(2);
-		assertThat(clientProxy.getThreadEventArgumentss().stream().filter(args -> ThreadEventArgumentsReason.STARTED.equals(args.getReason()))).hasSize(2);
+		assertThat(clientProxy.getThreadEventArgumentss()).hasSize(4);
+		assertThat(clientProxy.getThreadEventArgumentss().stream().filter(args -> ThreadEventArgumentsReason.STARTED.equals(args.getReason()))).hasSize(4);
 
 		assertThat(asyncSendBody1.isDone()).isFalse();
 		assertThat(asyncSendBody2.isDone()).isFalse();
@@ -80,7 +84,7 @@ class MultipleThreadsTest extends BaseTest {
 
 		waitRouteIsDone(asyncSendBody1);
 		waitRouteIsDone(asyncSendBody2);
-		assertThat(clientProxy.getThreadEventArgumentss()).hasSize(4);
+		assertThat(clientProxy.getThreadEventArgumentss()).hasSize(6);
 		assertThat(clientProxy.getThreadEventArgumentss().stream().filter(args -> ThreadEventArgumentsReason.EXITED.equals(args.getReason()))).hasSize(2);
 	}
 	

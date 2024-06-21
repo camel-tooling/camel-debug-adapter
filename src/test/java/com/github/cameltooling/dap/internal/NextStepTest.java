@@ -19,6 +19,7 @@ package com.github.cameltooling.dap.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
 
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
@@ -28,7 +29,10 @@ import org.eclipse.lsp4j.debug.NextArguments;
 import org.eclipse.lsp4j.debug.SetBreakpointsArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
+import org.eclipse.lsp4j.debug.Thread;
 import org.junit.jupiter.api.Test;
+
+import com.github.cameltooling.dap.internal.model.CamelExchangeThread;
 
 class NextStepTest extends BaseTest {
 	
@@ -83,7 +87,8 @@ class NextStepTest extends BaseTest {
 
 		waitRouteIsDone(asyncSendBody);
 
-		assertThat(server.threads().get().getThreads()).isEmpty();
+		Thread[] threads = server.threads().get().getThreads();
+		assertThat(Stream.of(threads)).doesNotHaveAnyElementsOfTypes(CamelExchangeThread.class);
 	}
 
 	@Test
@@ -122,6 +127,7 @@ class NextStepTest extends BaseTest {
 		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 		assertThat(asyncSendBody.isDone()).isFalse();
 		awaitAllVariablesFilled(0);
+		assertThat(server.threads().get().getThreads()).hasSize(2);
 
 		NextArguments nextArguments = new NextArguments();
 		nextArguments.setThreadId(1);
@@ -129,7 +135,8 @@ class NextStepTest extends BaseTest {
 
 		waitRouteIsDone(asyncSendBody);
 
-		assertThat(server.threads().get().getThreads()).isEmpty();
+		Thread[] threads = server.threads().get().getThreads();
+		assertThat(Stream.of(threads)).doesNotHaveAnyElementsOfTypes(CamelExchangeThread.class);
 	}
 	
 	@Test
@@ -183,6 +190,7 @@ class NextStepTest extends BaseTest {
 
 		waitRouteIsDone(asyncSendBody);
 
-		assertThat(server.threads().get().getThreads()).isEmpty();
+		Thread[] threads = server.threads().get().getThreads();
+		assertThat(Stream.of(threads)).doesNotHaveAnyElementsOfTypes(CamelExchangeThread.class);
 	}
 }

@@ -20,15 +20,22 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import javax.management.InstanceNotFoundException;
+import javax.management.IntrospectionException;
 import javax.management.JMX;
 import javax.management.MBeanServerConnection;
+import javax.management.MalformedObjectNameException;
 import javax.management.ObjectName;
+import javax.management.ReflectionException;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
@@ -41,8 +48,12 @@ import javax.xml.xpath.XPathFactory;
 
 import org.apache.camel.api.management.mbean.ManagedBacklogDebuggerMBean;
 import org.apache.camel.api.management.mbean.ManagedCamelContextMBean;
+import org.apache.camel.api.management.mbean.ManagedRouteMBean;
+import org.apache.camel.api.management.mbean.ManagedSuspendableRouteMBean;
+import org.eclipse.lsp4j.debug.ContinuedEventArguments;
 import org.eclipse.lsp4j.debug.OutputEventArguments;
 import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory;
+import org.eclipse.lsp4j.debug.PauseArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArguments;
 import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason;
 import org.eclipse.lsp4j.debug.ThreadEventArguments;
@@ -55,7 +66,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
 import com.github.cameltooling.dap.internal.model.CamelBreakpoint;
-import com.github.cameltooling.dap.internal.model.CamelThread;
+import com.github.cameltooling.dap.internal.model.CamelExchangeThread;
+import com.github.cameltooling.dap.internal.model.CamelRouteDefinitionThread;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 import com.sun.tools.attach.VirtualMachine;
@@ -64,6 +76,7 @@ public class BacklogDebuggerConnectionManager {
 
 	private static final String OBJECTNAME_BACKLOGDEBUGGER = "org.apache.camel:context=*,type=tracer,name=BacklogDebugger";
 	private static final String OBJECTNAME_CAMELCONTEXT = "org.apache.camel:context=*,type=context,name=*";
+	private static final String OBJECTNAME_CAMELROUTES = "org.apache.camel:context=*,type=routes,name=*";
 	public static final String DEFAULT_JMX_URI = "service:jmx:rmi:///jndi/rmi://localhost:1099/jmxrmi/camel";
 	private static final Logger LOGGER = LoggerFactory.getLogger(BacklogDebuggerConnectionManager.class);
 
@@ -76,7 +89,8 @@ public class BacklogDebuggerConnectionManager {
 	private volatile Document routesDOMDocument;
 	private volatile IDebugProtocolClient client;
 	private final Set<String> notifiedSuspendedBreakpointIds = ConcurrentHashMap.newKeySet();
-	private final Set<CamelThread> camelThreads = ConcurrentHashMap.newKeySet();
+	private final Set<CamelExchangeThread> camelExchangeThreads = ConcurrentHashMap.newKeySet();
+	private final Set<CamelRouteDefinitionThread> camelDefinitionThreads = ConcurrentHashMap.newKeySet();
 	private final AtomicInteger threadIdCounter = new AtomicInteger();
 	private final Map<String, CamelBreakpoint> camelBreakpointsWithSources = new ConcurrentHashMap<>();
 	
@@ -134,7 +148,7 @@ public class BacklogDebuggerConnectionManager {
 				backlogDebugger.enableDebugger();
 				routesDOMDocument = retrieveRoutesWithSourceLineNumber(jmxAddress);
 				
-				checkSuspendedNodeThread = new Thread((Runnable) this::checkSuspendedBreakpoints, "Camel DAP - Check Suspended node");
+				checkSuspendedNodeThread = new Thread((Runnable) this::checkLoop, "Camel DAP - Check Suspended node");
 				checkSuspendedNodeThread.start();
 				return true;
 			} else {
@@ -184,12 +198,14 @@ public class BacklogDebuggerConnectionManager {
 		return connector;
 	}
 
-	private void checkSuspendedBreakpoints() {
+	private void checkLoop() {
 		while(!Thread.currentThread().isInterrupted() && backlogDebugger != null && backlogDebugger.isEnabled()) {
 			Set<String> suspendedBreakpointNodeIds = backlogDebugger.suspendedBreakpointNodeIds();
 			for (String nodeId : suspendedBreakpointNodeIds) {
 				handleSuspendedBreakpoint(nodeId);
 			}
+			
+			handleRouteDefinitions();
 			
 			// TODO: might worth updating routesDomDocument?
 			
@@ -202,6 +218,65 @@ public class BacklogDebuggerConnectionManager {
 		}
 	}
 
+	private void handleRouteDefinitions() {
+		// TODO: support several Camel context - especially 2 routes with same name but in a different context
+		try {
+			Set<String> camelRouteIds = retrieveCamelRouteIds(mbeanConnection);
+			registerThreadForNewCamelRoute(camelRouteIds);
+			removeThreadForRemovedRoute(camelRouteIds);
+		} catch (MalformedObjectNameException | IOException e) {
+			LOGGER.error("Cannot retrieve Camel routes", e);
+		}
+	}
+
+	private void removeThreadForRemovedRoute(Set<String> camelRouteIds) {
+		Set<CamelRouteDefinitionThread> camelDefinitionThreadsToRemove = new HashSet<>();
+		for (CamelRouteDefinitionThread camelContextDefinitionThread : camelDefinitionThreads) {
+			if(!camelRouteIds.contains(camelContextDefinitionThread.getName())) {
+				camelDefinitionThreadsToRemove.add(camelContextDefinitionThread);
+			}
+		}
+		for (CamelRouteDefinitionThread camelRouteDefinitionThreadToRemove : camelDefinitionThreadsToRemove) {
+			camelDefinitionThreads.remove(camelRouteDefinitionThreadToRemove);
+			ThreadEventArguments threadEventArguments = new ThreadEventArguments();
+			threadEventArguments.setThreadId(camelRouteDefinitionThreadToRemove.getId());
+			threadEventArguments.setReason(ThreadEventArgumentsReason.EXITED);
+			client.thread(threadEventArguments);
+		}
+	}
+
+	private void registerThreadForNewCamelRoute(Set<String> camelRouteIds) {
+		for (String camelId : camelRouteIds) {
+			Optional<CamelRouteDefinitionThread> definitionThreadOptional = camelDefinitionThreads
+					.stream()
+					.filter(definitionThread -> camelId.equals(definitionThread.getName()))
+					.findAny();
+			if (definitionThreadOptional.isEmpty()) {
+				CamelRouteDefinitionThread camelRouteDefinitionThread = new CamelRouteDefinitionThread(camelId);
+				camelDefinitionThreads.add(camelRouteDefinitionThread);
+				ThreadEventArguments threadEventArguments = new ThreadEventArguments();
+				threadEventArguments.setThreadId(camelRouteDefinitionThread.getId());
+				threadEventArguments.setReason(ThreadEventArgumentsReason.STARTED);
+				client.thread(threadEventArguments);
+			}
+		}
+	}
+
+	private Set<String> retrieveCamelRouteIds(MBeanServerConnection connection)
+			throws MalformedObjectNameException, IOException {
+		ObjectName camelRoutesObjectName = new ObjectName(OBJECTNAME_CAMELROUTES);
+		Set<ObjectName> camelRouteMbeanNames = connection.queryNames(camelRoutesObjectName, null);
+		Set<String> camelRouteIds = new HashSet<>();
+		if (camelRouteMbeanNames != null && !camelRouteMbeanNames.isEmpty()) {
+			for (ObjectName camelContextMbeanName : camelRouteMbeanNames) {
+				ManagedRouteMBean camelRoute = JMX.newMBeanProxy(connection, camelContextMbeanName, ManagedRouteMBean.class);
+				String camelRouteId = camelRoute.getRouteId();
+				camelRouteIds.add(camelRouteId);
+			}
+		}
+		return camelRouteIds;
+	}
+
 	private void handleSuspendedBreakpoint(String nodeId) {
 		if (!isStepping && !notifiedSuspendedBreakpointIds.contains(nodeId)) {
 			StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
@@ -209,22 +284,22 @@ public class BacklogDebuggerConnectionManager {
 			// Keep using deprecated method to have it still working with 4.1- 
 			String xml = backlogDebugger.dumpTracedMessagesAsXml(nodeId, true);
 			EventMessage eventMessage = new UnmarshallerEventMessage().getUnmarshalledEventMessage(xml);
-			Optional<CamelThread> thread = camelThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
+			Optional<CamelExchangeThread> thread = camelExchangeThreads.stream().filter(camelThread -> camelThread.getExchangeId().equals(eventMessage.getExchangeId())).findAny();
 			if(thread.isEmpty()) {
 				final int threadId = threadIdCounter.incrementAndGet();
-				camelThreads.add(new CamelThread(threadId, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
+				camelExchangeThreads.add(new CamelExchangeThread(threadId, nodeId, eventMessage, camelBreakpointsWithSources.get(nodeId)));
 				ThreadEventArguments threadEventArguments = new ThreadEventArguments();
 				threadEventArguments.setReason(ThreadEventArgumentsReason.STARTED);
 				threadEventArguments.setThreadId(threadId);
 				client.thread(threadEventArguments);
 				stoppedEventArgs.setThreadId(threadId);
 			} else {
-				CamelThread camelThread = thread.get();
+				CamelExchangeThread camelThread = thread.get();
 				CamelBreakpoint camelBreakpoint = retrieveCorrespondingBreakpoint(nodeId, camelThread);
 				stoppedEventArgs.setThreadId(camelThread.getId());
 				if (camelBreakpoint != null) {
-					camelThreads.remove(camelThread);
-					camelThreads.add(new CamelThread(camelThread.getId(), nodeId, eventMessage, camelBreakpoint));
+					camelExchangeThreads.remove(camelThread);
+					camelExchangeThreads.add(new CamelExchangeThread(camelThread.getId(), nodeId, eventMessage, camelBreakpoint));
 				}
 			}
 			notifiedSuspendedBreakpointIds.add(nodeId);
@@ -232,7 +307,7 @@ public class BacklogDebuggerConnectionManager {
 		}
 	}
 
-	private CamelBreakpoint retrieveCorrespondingBreakpoint(String nodeId, CamelThread camelThread) {
+	private CamelBreakpoint retrieveCorrespondingBreakpoint(String nodeId, CamelExchangeThread camelThread) {
 		CamelBreakpoint camelBreakpoint = camelBreakpointsWithSources.get(nodeId);
 		if(camelBreakpoint != null) {
 			return camelBreakpoint;
@@ -331,23 +406,43 @@ public class BacklogDebuggerConnectionManager {
 	}
 
 	public void resumeAll() {
-		for (CamelThread camelThread : camelThreads) {
+		for (CamelExchangeThread camelThread : camelExchangeThreads) {
 			sendThreadExitEvent(camelThread);
 		}
 		backlogDebugger.resumeAll();
-		camelThreads.clear();
+		camelExchangeThreads.clear();
 		notifiedSuspendedBreakpointIds.clear();
+		
+		for (CamelRouteDefinitionThread camelContextDefinitionThread : camelDefinitionThreads) {
+			resume(camelContextDefinitionThread);
+		}
 	}
 
-	private void sendThreadExitEvent(CamelThread camelThread) {
+	private void sendThreadResumeEvent(org.eclipse.lsp4j.debug.Thread camelThread) {
+		ContinuedEventArguments args = new ContinuedEventArguments();
+		args.setAllThreadsContinued(Boolean.FALSE);
+		args.setThreadId(camelThread.getId());
+		client.continued(args);
+	}
+
+	private void sendThreadExitEvent(CamelExchangeThread camelThread) {
 		ThreadEventArguments threadEventArguments = new ThreadEventArguments();
 		threadEventArguments.setReason(ThreadEventArgumentsReason.EXITED);
 		threadEventArguments.setThreadId(camelThread.getId());
 		client.thread(threadEventArguments);
 	}
 
-	public Set<CamelThread> getCamelThreads() {
-		return camelThreads;
+	public Set<CamelExchangeThread> getCamelExchangeThreads() {
+		return camelExchangeThreads;
+	}
+	
+	public Set<CamelRouteDefinitionThread> getCamelContextDefinitionThreads() {
+		return camelDefinitionThreads;
+	}
+	
+	public Set<org.eclipse.lsp4j.debug.Thread> getAllThreads() {
+		return Stream.concat(camelExchangeThreads.stream(), camelDefinitionThreads.stream())
+		        .collect(Collectors.toSet());
 	}
 
 	public void updateBreakpointsWithSources(CamelBreakpoint breakpoint) {
@@ -359,23 +454,45 @@ public class BacklogDebuggerConnectionManager {
 		this.camelBreakpointsWithSources.remove(previouslySetBreakpointId);
 	}
 
-	public void resume(CamelThread camelThread) {
-		backlogDebugger.resumeBreakpoint(camelThread.getBreakPointId());
-		notifiedSuspendedBreakpointIds.remove(camelThread.getBreakPointId());
-		camelThreads.remove(camelThread);
-		sendThreadExitEvent(camelThread);
+	public void resume(org.eclipse.lsp4j.debug.Thread camelThread) {
+		if (camelThread instanceof CamelExchangeThread camelExchangeThread) {
+			backlogDebugger.resumeBreakpoint(camelExchangeThread.getBreakPointId());
+			notifiedSuspendedBreakpointIds.remove(camelExchangeThread.getBreakPointId());
+			camelExchangeThreads.remove(camelThread);
+			sendThreadExitEvent(camelExchangeThread);
+		} else if (camelThread instanceof CamelRouteDefinitionThread camelRouteDefinitionThread) {
+			ManagedRouteMBean camelRoute = findCorrespondingCamelRouteMBean(mbeanConnection, camelRouteDefinitionThread);
+			if (camelRoute != null) {
+				resume(camelThread, camelRoute);
+			}
+		}
 	}
 
-	public void next(CamelThread camelThread) {
-		isStepping = true;
-		String breakPointId = camelThread.getBreakPointId();
-		if(isLastInroute(breakPointId)) {
-			camelThreads.remove(camelThread);
-			sendThreadExitEvent(camelThread);
+	private void resume(org.eclipse.lsp4j.debug.Thread camelThread, ManagedRouteMBean camelRoute) {
+		try {
+			if (camelRoute instanceof ManagedSuspendableRouteMBean suspendableCamelRoute) {
+				suspendableCamelRoute.resume();
+			} else {
+				camelRoute.start();
+			}
+			sendThreadResumeEvent(camelThread);
+		} catch (Exception e) {
+			LOGGER.error("Cannot resume Camel route" + camelRoute.getCamelId(), e);
 		}
-		backlogDebugger.stepBreakpoint(breakPointId);
-		notifiedSuspendedBreakpointIds.remove(breakPointId);
-		isStepping = false;
+	}
+
+	public void next(org.eclipse.lsp4j.debug.Thread camelThread) {
+		if (camelThread instanceof CamelExchangeThread camelExchangeThread) {
+			isStepping = true;
+			String breakPointId = camelExchangeThread.getBreakPointId();
+			if(isLastInroute(breakPointId)) {
+				camelExchangeThreads.remove(camelExchangeThread);
+				sendThreadExitEvent(camelExchangeThread);
+			}
+			backlogDebugger.stepBreakpoint(breakPointId);
+			notifiedSuspendedBreakpointIds.remove(breakPointId);
+			isStepping = false;
+		}
 	}
 
 	private boolean isLastInroute(String id) {
@@ -406,4 +523,70 @@ public class BacklogDebuggerConnectionManager {
         return true;
 	}
 
+	public void suspend(PauseArguments args) {
+		MBeanServerConnection connection = mbeanConnection;
+		if (args.getThreadId() == 0) {
+			for (CamelRouteDefinitionThread camelRouteDefinitionThread : camelDefinitionThreads) {
+				suspend(connection, camelRouteDefinitionThread);
+			}
+		} else {
+			Optional<CamelRouteDefinitionThread> camelDefinition = camelDefinitionThreads.stream()
+					.filter(camelDefinitionThread -> args.getThreadId() == camelDefinitionThread.getId())
+					.findAny();
+			if (camelDefinition.isPresent()) {
+				CamelRouteDefinitionThread camelRouteDefinitionThread = camelDefinition.get();
+				suspend(connection, camelRouteDefinitionThread);
+			}
+		}
+	}
+
+	private void suspend(MBeanServerConnection connection, CamelRouteDefinitionThread camelRouteDefinitionThread) {
+		ManagedRouteMBean camelRoute = findCorrespondingCamelRouteMBean(connection, camelRouteDefinitionThread);
+		if (camelRoute != null) {
+			suspend(camelRoute, camelRouteDefinitionThread);
+		}
+	}
+
+	private ManagedRouteMBean findCorrespondingCamelRouteMBean(MBeanServerConnection connection,
+			CamelRouteDefinitionThread camelRouteDefinitionThread) {
+		try {
+			ObjectName camelRoutesObjectName = new ObjectName(OBJECTNAME_CAMELROUTES);
+			Set<ObjectName> camelRouteMbeanNames = connection.queryNames(camelRoutesObjectName, null);
+			for (ObjectName camelRouteMbeanName : camelRouteMbeanNames) {
+				String classNameOfMBean = connection.getMBeanInfo(camelRouteMbeanName).getClassName();
+				if (classNameOfMBean.contains("ManagedSuspendableRoute")) {
+					ManagedSuspendableRouteMBean camelRoute = JMX.newMBeanProxy(connection, camelRouteMbeanName, ManagedSuspendableRouteMBean.class);
+					if (camelRoute.getRouteId().equals(camelRouteDefinitionThread.getName())) {
+						return camelRoute;
+					}
+				} else {
+					ManagedRouteMBean camelRoute = JMX.newMBeanProxy(connection, camelRouteMbeanName, ManagedRouteMBean.class);
+					if (camelRoute.getRouteId().equals(camelRouteDefinitionThread.getName())) {
+						return camelRoute;
+					}
+				}
+			}
+		} catch (MalformedObjectNameException | IOException | InstanceNotFoundException | IntrospectionException | ReflectionException e ) {
+			LOGGER.error("Cannot retrieve Camel route", e);
+		}
+		return null;
+	}
+
+	private void suspend(ManagedRouteMBean camelRoute,
+			CamelRouteDefinitionThread camelRouteDefinitionThread) {
+		try {
+			if(camelRoute instanceof ManagedSuspendableRouteMBean suspendableCamelRoute) {
+				suspendableCamelRoute.suspend();
+			} else {
+				camelRoute.stop();
+			}
+			StoppedEventArguments stoppedEventArgs = new StoppedEventArguments();
+			stoppedEventArgs.setAllThreadsStopped(Boolean.FALSE);
+			stoppedEventArgs.setReason(StoppedEventArgumentsReason.PAUSE);
+			stoppedEventArgs.setThreadId(camelRouteDefinitionThread.getId());
+			client.stopped(stoppedEventArgs);
+		} catch (Exception e) {
+			LOGGER.error("Cannot suspend Camel route", e);
+		}
+	}
 }

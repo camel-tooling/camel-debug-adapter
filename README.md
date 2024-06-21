@@ -31,6 +31,7 @@ The Camel Debug Server Adapter must use Java Runtime Environment 11+ with `com.s
 - Inspect some variables when breakpoint is hit
 - Stop on hit breakpoint
 - Resume a single route instance and resume all
+- Pause and resume route definitions (technically suspend/resume or stop/start Camel routes depending if they are suspendable or not)
 - Stepping when the route definition is in the same file
 - Update values of:
   - Common variables which are grouped in `Debugger` scope
