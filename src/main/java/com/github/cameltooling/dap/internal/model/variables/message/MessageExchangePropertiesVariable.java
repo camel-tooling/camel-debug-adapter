@@ -69,6 +69,7 @@ public class MessageExchangePropertiesVariable extends Variable {
 				for (ExchangeProperty exchangeProperty : exchangeProperties) {
 					if (exchangeProperty.getKey().equals(args.getName())) {
 						exchangeProperty.setContent(args.getValue());
+						break;
 					}
 				}
 			}

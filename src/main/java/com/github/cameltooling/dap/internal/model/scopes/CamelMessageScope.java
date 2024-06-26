@@ -61,7 +61,7 @@ public class CamelMessageScope extends CamelScope {
 				variables.add(headersVariable);
 				exchangePropertiesVariable = new MessageExchangePropertiesVariable(variablesReference, eventMessage.getMessage().getExchangeProperties(), getBreakpointId());
 				variables.add(getExchangePropertiesVariable());
-				exchangeVariablesVariable = new MessageExchangeVariablesVariable(variablesReference, eventMessage.getMessage().getExchangeVariables());
+				exchangeVariablesVariable = new MessageExchangeVariablesVariable(variablesReference, eventMessage.getMessage().getExchangeVariables(), getBreakpointId());
 				variables.add(getExchangeVariablesVariable());
 			}
 		} else {
@@ -97,7 +97,16 @@ public class CamelMessageScope extends CamelScope {
 			}
 		}
 		if (getExchangePropertiesVariable() != null) {
-			return getExchangePropertiesVariable().setVariableIfInScope(args, debugger);
+			SetVariableResponse response = getExchangePropertiesVariable().setVariableIfInScope(args, debugger);
+			if (response != null) {
+				return response;
+			}
+		}
+		if (getExchangeVariablesVariable() != null) {
+			SetVariableResponse response = getExchangeVariablesVariable().setVariableIfInScope(args, debugger);
+			if (response != null) {
+				return response;
+			}
 		}
 		return null;
 	}

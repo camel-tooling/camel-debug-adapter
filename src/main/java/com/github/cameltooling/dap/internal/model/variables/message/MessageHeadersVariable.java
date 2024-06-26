@@ -66,6 +66,7 @@ public class MessageHeadersVariable extends Variable {
 				for (Header header : headers) {
 					if (header.getKey().equals(args.getName())) {
 						header.setValue(args.getValue());
+						break;
 					}
 				}
 			}
