@@ -75,7 +75,7 @@ public class Message implements Serializable {
 	@XmlElementWrapper(name = "exchangeVariables")
 	@XmlElement(name = "exchangeVariable")
 	public List<ExchangeVariable> getExchangeVariables() {
-		return exchangeVariables;
+		return this.exchangeVariables;
 	}
 	public void setExchangeVariables(List<ExchangeVariable> exchangeVariables) {
 		this.exchangeVariables = exchangeVariables;

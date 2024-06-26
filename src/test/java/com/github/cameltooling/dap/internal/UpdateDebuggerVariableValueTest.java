@@ -51,6 +51,7 @@ import com.github.cameltooling.dap.internal.model.variables.debugger.MaxCharsFor
 import com.github.cameltooling.dap.internal.model.variables.message.MessageBodyCamelVariable;
 import com.github.cameltooling.dap.internal.types.EventMessage;
 import com.github.cameltooling.dap.internal.types.ExchangeProperty;
+import com.github.cameltooling.dap.internal.types.ExchangeVariable;
 import com.github.cameltooling.dap.internal.types.UnmarshallerEventMessage;
 
 class UpdateDebuggerVariableValueTest extends BaseTest {
@@ -60,6 +61,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 	private static final int NUMBER_OF_HEADER = 1;
 	private static final int NUMBER_OF_EXCHANGE_PROPERTY = 1;
 	private static final int NUMBER_OF_EXCHANGE_PROPERTY_PARENT = 1;
+	private static final int NUMBER_OF_EXCHANGE_VARIABLE = 1;
 	private Scope debuggerScope;
 	private CompletableFuture<Object> asyncSendBody;
 
@@ -75,6 +77,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 				from(startEndpointUri)
 					.setHeader("header1", constant("initial header value"))
 					.setProperty("property1", constant("initial exchange property value"))
+					.setVariable("variable1", constant("initial exchange variable value"))
 					.log("Log from test").id(LOG_ID) // XXX-breakpoint-XXX
 					.log("Another log").id(SECOND_LOG_ID); 
 			}
@@ -97,7 +100,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 		assertThat(asyncSendBody.isDone()).isFalse();
-		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT);
+		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT + NUMBER_OF_EXCHANGE_VARIABLE);
 		
 		debuggerScope = clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelDebuggerScope.NAME.equals(scope.getName())).findAny().get();
 	}
@@ -236,6 +239,25 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 			.findAny();
 		assertThat(response.getValue()).isEqualTo(property1.get().getContent());
 	}
+
+	@Test
+	void updateExchangeVariable() throws Exception {
+		SetVariableArguments args = new SetVariableArguments();
+		args.setName("variable1");
+		args.setValue("an updated exchange variable");
+		CamelMessageScope messageScope = (CamelMessageScope) clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelMessageScope.NAME.equals(scope.getName())).findAny().get();
+		args.setVariablesReference(messageScope.getExchangeVariablesVariable().getVariablesReference());
+
+		SetVariableResponse response = server.setVariable(args).get();
+
+		assertThat(response.getValue()).isEqualTo("an updated exchange variable");
+
+		EventMessage eventMessage = getMessageStateOnNextStep();
+		Optional<ExchangeVariable> variable1 = eventMessage.getMessage().getExchangeVariables().stream()
+			.filter(exchangeVariable -> "variable1".equals(exchangeVariable.getKey()))
+			.findAny();
+		assertThat(response.getValue()).isEqualTo(variable1.get().getValue());
+	}
 	
 	@Test
 	void updateToAnInvalidValueReportsAnOutputError() throws Exception {
@@ -260,7 +282,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		server.next(nextArgs);
 		
 		waitBreakpointNotification(2);
-		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT);
+		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT + NUMBER_OF_EXCHANGE_VARIABLE);
 		
 		// Keep using deprecated method to have it still working with 4.1-
 		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, true);
