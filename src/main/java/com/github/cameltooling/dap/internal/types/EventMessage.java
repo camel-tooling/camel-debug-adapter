@@ -167,5 +167,21 @@ public class EventMessage implements BacklogTracerEventMessage {
 	public void setExceptionAsJSon(String exceptionAsJSon) {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
+	@Override
+	public boolean isRemoteEndpoint() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getEndpointServiceUrl() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getEndpointServiceProtocol() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public Map<String, String> getEndpointServiceMetadata() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
 
 }
