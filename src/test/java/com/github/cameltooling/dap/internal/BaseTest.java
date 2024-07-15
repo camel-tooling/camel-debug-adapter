@@ -45,7 +45,7 @@ import com.github.cameltooling.dap.internal.telemetry.TelemetryEvent;
 //@SetSystemProperty(key = "camel.debug.enabled", value = "true")
 public abstract class BaseTest {
 
-	protected static final int DEFAULT_VARIABLES_NUMBER = 17;
+	protected static final int DEFAULT_VARIABLES_NUMBER = 18;
 	protected CamelDebugAdapterServer server;
 	protected DummyCamelDebugClient clientProxy;
 	protected CamelContext context;

@@ -60,7 +60,6 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 	protected static final String SECOND_LOG_ID = "second-log-id";
 	private static final int NUMBER_OF_HEADER = 1;
 	private static final int NUMBER_OF_EXCHANGE_PROPERTY = 1;
-	private static final int NUMBER_OF_EXCHANGE_PROPERTY_PARENT = 1;
 	private static final int NUMBER_OF_EXCHANGE_VARIABLE = 1;
 	private Scope debuggerScope;
 	private CompletableFuture<Object> asyncSendBody;
@@ -100,7 +99,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		assertThat(stoppedEventArgument.getThreadId()).isEqualTo(1);
 		assertThat(stoppedEventArgument.getReason()).isEqualTo(StoppedEventArgumentsReason.BREAKPOINT);
 		assertThat(asyncSendBody.isDone()).isFalse();
-		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT + NUMBER_OF_EXCHANGE_VARIABLE);
+		awaitAllVariablesFilled(0, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_VARIABLE);
 		
 		debuggerScope = clientProxy.getAllStacksAndVars().get(0).getScopes().stream().filter(scope -> CamelDebuggerScope.NAME.equals(scope.getName())).findAny().get();
 	}
@@ -282,7 +281,7 @@ class UpdateDebuggerVariableValueTest extends BaseTest {
 		server.next(nextArgs);
 		
 		waitBreakpointNotification(2);
-		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_PROPERTY_PARENT + NUMBER_OF_EXCHANGE_VARIABLE);
+		awaitAllVariablesFilled(1, DEFAULT_VARIABLES_NUMBER + NUMBER_OF_HEADER + NUMBER_OF_EXCHANGE_PROPERTY + NUMBER_OF_EXCHANGE_VARIABLE);
 		
 		// Keep using deprecated method to have it still working with 4.1-
 		String messagesAsXml = server.getConnectionManager().getBacklogDebugger().dumpTracedMessagesAsXml(SECOND_LOG_ID, true);
