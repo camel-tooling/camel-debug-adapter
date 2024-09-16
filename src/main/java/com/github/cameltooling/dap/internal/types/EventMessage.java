@@ -158,15 +158,7 @@ public class EventMessage implements BacklogTracerEventMessage {
 	public String getEndpointUri() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
-	
-	@Override
-	public void setExceptionAsXml(String exceptionAsXml) {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public void setExceptionAsJSon(String exceptionAsJSon) {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
+
 	@Override
 	public boolean isRemoteEndpoint() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
@@ -181,6 +173,10 @@ public class EventMessage implements BacklogTracerEventMessage {
 	}
 	@Override
 	public Map<String, String> getEndpointServiceMetadata() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public void setException(Throwable cause) {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
 
