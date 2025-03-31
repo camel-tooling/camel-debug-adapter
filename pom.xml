@@ -67,7 +67,7 @@
 			</plugin>
 			<plugin>
 				<artifactId>maven-surefire-plugin</artifactId>
-				<version>3.5.2</version>
+				<version>3.5.3</version>
 				<configuration>
 					<argLine>@{argLine} -Djdk.attach.allowAttachSelf=true</argLine>
 					<trimStackTrace>false</trimStackTrace>
