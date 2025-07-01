@@ -202,7 +202,7 @@ public class CamelDebugAdapterServer implements IDebugProtocolServer {
 				Set<org.eclipse.lsp4j.debug.Thread> threads = connectionManager.getAllThreads();
 				ThreadsResponse value = new ThreadsResponse();
 				value.setThreads(threads.toArray(new org.eclipse.lsp4j.debug.Thread[0]));
-				LOGGER.error("there are " + threads.size() + " threads");
+				LOGGER.info("there are " + threads.size() + " threads");
 				return value;
 			}
 		);
