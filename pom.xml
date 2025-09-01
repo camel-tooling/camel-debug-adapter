@@ -49,7 +49,7 @@
 		<!-- must be aligned with the one from Camel -->
 		<version.jaxb>4.0.0</version.jaxb>
 		<version.junit.pioneer>2.3.0</version.junit.pioneer>
-		<version-jolokia>2.2.9</version-jolokia>
+		<version-jolokia>2.3.0</version-jolokia>
 	</properties>
 	<build>
 		<plugins>
