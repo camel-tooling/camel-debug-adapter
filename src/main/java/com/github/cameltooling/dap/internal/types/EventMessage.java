@@ -16,27 +16,60 @@
  */
 package com.github.cameltooling.dap.internal.types;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Locale;
 import java.util.Map;
 
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlElement;
 import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlTransient;
+import jakarta.xml.bind.annotation.adapters.XmlAdapter;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 
 import org.apache.camel.spi.BacklogTracerEventMessage;
 
-
+@XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "backlogTracerEventMessage")
 public class EventMessage implements BacklogTracerEventMessage {
 	
 	private static final long serialVersionUID = 2559418843237642923L;
+	private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern(TIMESTAMP_FORMAT, Locale.ROOT);
 	
 	private long uid;
-	//TODO: use a real date for the timestamp
-	//@XmlJavaTypeAdapter(DateAdapter.class)
-	private long timestamp;
+	private boolean first;
+	private boolean last;
+	private boolean rest;
+	private boolean template;
+	@XmlElement(name = "timestamp")
+	@XmlJavaTypeAdapter(TimestampAdapter.class)
+	private Long timestamp;
+	private long elapsed;
+	private boolean done;
+	private boolean failed;
+	private String location;
+	private String processingThreadName;
 	private String routeId;
+	private String fromRouteId;
 	private String toNode;
+	private String toNodeParentId;
+	private String toNodeParentWhenId;
+	private String toNodeParentWhenLabel;
+	private String toNodeShortName;
+	private String toNodeLabel;
+	private int toNodeLevel;
 	private String exchangeId;
+	private String correlationExchangeId;
 	private Message message;
+	private String endpointUri;
+	private boolean remoteEndpoint;
+	private String endpointServiceUrl;
+	private String endpointServiceProtocol;
+	private Map<String, String> endpointServiceMetadata;
+	private Throwable exception;
 	
 	@XmlElement(name = "uid")
 	public long getUid() {
@@ -46,12 +79,84 @@ public class EventMessage implements BacklogTracerEventMessage {
 		this.uid = uid;
 	}
 	
-	@XmlElement(name = "timestamp")
+	@XmlElement(name = "first")
+	public boolean isFirst() {
+		return first;
+	}
+	public void setFirst(boolean first) {
+		this.first = first;
+	}
+	
+	@XmlElement(name = "last")
+	public boolean isLast() {
+		return last;
+	}
+	public void setLast(boolean last) {
+		this.last = last;
+	}
+	
+	@XmlElement(name = "rest")
+	public boolean isRest() {
+		return rest;
+	}
+	public void setRest(boolean rest) {
+		this.rest = rest;
+	}
+	
+	@XmlElement(name = "template")
+	public boolean isTemplate() {
+		return template;
+	}
+	public void setTemplate(boolean template) {
+		this.template = template;
+	}
+	
+	@XmlTransient
 	public long getTimestamp() {
-		return timestamp;
+		return timestamp != null ? timestamp.longValue() : 0L;
 	}
 	public void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
+	}
+	
+	@XmlElement(name = "elapsed")
+	public long getElapsed() {
+		return elapsed;
+	}
+	public void setElapsed(long elapsed) {
+		this.elapsed = elapsed;
+	}
+	
+	@XmlElement(name = "done")
+	public boolean isDone() {
+		return done;
+	}
+	public void setDone(boolean done) {
+		this.done = done;
+	}
+	
+	@XmlElement(name = "failed")
+	public boolean isFailed() {
+		return failed;
+	}
+	public void setFailed(boolean failed) {
+		this.failed = failed;
+	}
+	
+	@XmlElement(name = "location")
+	public String getLocation() {
+		return location;
+	}
+	public void setLocation(String location) {
+		this.location = location;
+	}
+	
+	@XmlElement(name = "threadName")
+	public String getProcessingThreadName() {
+		return processingThreadName;
+	}
+	public void setProcessingThreadName(String processingThreadName) {
+		this.processingThreadName = processingThreadName;
 	}
 	
 	@XmlElement(name = "routeId")
@@ -62,12 +167,68 @@ public class EventMessage implements BacklogTracerEventMessage {
 		this.routeId = routeId;
 	}
 	
+	@XmlElement(name = "fromRouteId")
+	public String getFromRouteId() {
+		return fromRouteId;
+	}
+	public void setFromRouteId(String fromRouteId) {
+		this.fromRouteId = fromRouteId;
+	}
+	
 	@XmlElement(name = "toNode")
 	public String getToNode() {
 		return toNode;
 	}
 	public void setToNode(String toNode) {
 		this.toNode = toNode;
+	}
+	
+	@XmlElement(name = "toNodeParentId")
+	public String getToNodeParentId() {
+		return toNodeParentId;
+	}
+	public void setToNodeParentId(String toNodeParentId) {
+		this.toNodeParentId = toNodeParentId;
+	}
+	
+	@XmlElement(name = "toNodeParentWhenId")
+	public String getToNodeParentWhenId() {
+		return toNodeParentWhenId;
+	}
+	public void setToNodeParentWhenId(String toNodeParentWhenId) {
+		this.toNodeParentWhenId = toNodeParentWhenId;
+	}
+	
+	@XmlElement(name = "toNodeParentWhenLabel")
+	public String getToNodeParentWhenLabel() {
+		return toNodeParentWhenLabel;
+	}
+	public void setToNodeParentWhenLabel(String toNodeParentWhenLabel) {
+		this.toNodeParentWhenLabel = toNodeParentWhenLabel;
+	}
+	
+	@XmlElement(name = "toNodeShortName")
+	public String getToNodeShortName() {
+		return toNodeShortName;
+	}
+	public void setToNodeShortName(String toNodeShortName) {
+		this.toNodeShortName = toNodeShortName;
+	}
+	
+	@XmlElement(name = "toNodeLabel")
+	public String getToNodeLabel() {
+		return toNodeLabel;
+	}
+	public void setToNodeLabel(String toNodeLabel) {
+		this.toNodeLabel = toNodeLabel;
+	}
+	
+	@XmlElement(name = "toNodeLevel")
+	public int getToNodeLevel() {
+		return toNodeLevel;
+	}
+	public void setToNodeLevel(int toNodeLevel) {
+		this.toNodeLevel = toNodeLevel;
 	}
 	
 	@XmlElement(name = "exchangeId")
@@ -78,6 +239,14 @@ public class EventMessage implements BacklogTracerEventMessage {
 		this.exchangeId = exchangeId;
 	}
 	
+	@XmlElement(name = "correlationExchangeId")
+	public String getCorrelationExchangeId() {
+		return correlationExchangeId;
+	}
+	public void setCorrelationExchangeId(String correlationExchangeId) {
+		this.correlationExchangeId = correlationExchangeId;
+	}
+	
 	@XmlElement(name = "message")
 	public Message getMessage() {
 		return message;
@@ -86,98 +255,90 @@ public class EventMessage implements BacklogTracerEventMessage {
 		this.message = message;
 	}
 	
-	@Override
 	public String getMessageAsXml() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
-	@Override
 	public String toXml(int indent) {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
-	@Override
-	public boolean isRest() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public boolean isTemplate() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
 	public String getMessageAsJSon() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
-	@Override
 	public String toJSon(int indent) {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
-	@Override
 	public Map<String, Object> asJSon() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
-	@Override
-	public boolean isFirst() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public boolean isLast() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public String getLocation() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public String getProcessingThreadName() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public long getElapsed() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public boolean isDone() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
-	public boolean isFailed() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
-	}
-	@Override
 	public boolean hasException() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return exception != null;
 	}
-	@Override
 	public String getExceptionAsXml() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return null;
 	}
-	@Override
 	public String getExceptionAsJSon() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return null;
 	}
-	@Override
 	public String getEndpointUri() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return endpointUri;
+	}
+	public void setEndpointUri(String endpointUri) {
+		this.endpointUri = endpointUri;
 	}
 
-	@Override
 	public boolean isRemoteEndpoint() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return remoteEndpoint;
 	}
-	@Override
+	public void setRemoteEndpoint(boolean remoteEndpoint) {
+		this.remoteEndpoint = remoteEndpoint;
+	}
 	public String getEndpointServiceUrl() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return endpointServiceUrl;
 	}
-	@Override
+	public void setEndpointServiceUrl(String endpointServiceUrl) {
+		this.endpointServiceUrl = endpointServiceUrl;
+	}
 	public String getEndpointServiceProtocol() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return endpointServiceProtocol;
 	}
-	@Override
+	public void setEndpointServiceProtocol(String endpointServiceProtocol) {
+		this.endpointServiceProtocol = endpointServiceProtocol;
+	}
 	public Map<String, String> getEndpointServiceMetadata() {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		return endpointServiceMetadata;
 	}
-	@Override
+	public void setEndpointServiceMetadata(Map<String, String> endpointServiceMetadata) {
+		this.endpointServiceMetadata = endpointServiceMetadata;
+	}
 	public void setException(Throwable cause) {
-		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+		this.exception = cause;
+	}
+
+	private static final class TimestampAdapter extends XmlAdapter<String, Long> {
+
+		@Override
+		public Long unmarshal(String value) {
+			if (value == null || value.isBlank()) {
+				return 0L;
+			}
+			try {
+				return Long.valueOf(value);
+			} catch (NumberFormatException ex) {
+				try {
+					return OffsetDateTime.parse(value, TIMESTAMP_FORMATTER).toInstant().toEpochMilli();
+				} catch (DateTimeParseException e) {
+					throw new IllegalArgumentException("Cannot parse backlog tracer timestamp: " + value, e);
+				}
+			}
+		}
+
+		@Override
+		public String marshal(Long value) {
+			if (value == null) {
+				return null;
+			}
+			return TIMESTAMP_FORMATTER.format(OffsetDateTime.ofInstant(java.time.Instant.ofEpochMilli(value), java.time.ZoneOffset.UTC));
+		}
 	}
 
 }

@@ -18,6 +18,10 @@ package com.github.cameltooling.dap.internal.types;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+
 import org.junit.jupiter.api.Test;
 
 class UnmarshallerEventMessageTest {
@@ -39,8 +43,16 @@ class UnmarshallerEventMessageTest {
   <failed>false</failed>
   <location>basic.yaml:23</location>
   <routeId>a-route-id</routeId>
+  <fromRouteId>direct:start</fromRouteId>
   <toNode>testBasicFlow-log-id</toNode>
+  <toNodeParentId>choice-parent-id</toNodeParentId>
+  <toNodeParentWhenId>choice-when-id</toNodeParentWhenId>
+  <toNodeParentWhenLabel>when[simple{${body}}]</toNodeParentWhenLabel>
+  <toNodeShortName>log</toNodeShortName>
+  <toNodeLabel>log:foo</toNodeLabel>
+  <toNodeLevel>2</toNodeLevel>
   <exchangeId>7F4C7BF7F3898E7-0000000000000000</exchangeId>
+  <correlationExchangeId>ABC-DEF-123</correlationExchangeId>
   <message exchangeId="7F4C7BF7F3898E7-0000000000000000" exchangePattern="InOnly" exchangeType="org.apache.camel.support.DefaultExchange" messageType="org.apache.camel.support.DefaultMessage">
     <exchangeProperties>
       <exchangeProperty key="CamelToEndpoint" type="java.lang.String">direct://testSetBreakpoint</exchangeProperty>
@@ -60,12 +72,37 @@ class UnmarshallerEventMessageTest {
 </backlogTracerEventMessage>
 """;
 		EventMessage message = new UnmarshallerEventMessage().getUnmarshalledEventMessage(eventMessageGeneratedWithCamel4_2);
+		long expectedTimestamp = OffsetDateTime.parse("2023-11-20T14:20:26.971+0100",
+				DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.ROOT))
+				.toInstant()
+				.toEpochMilli();
 		assertThat(message).isNotNull();
 		assertThat(message.getUid()).isEqualTo(1);
+		assertThat(message.isFirst()).isFalse();
+		assertThat(message.isLast()).isFalse();
+		assertThat(message.isRest()).isFalse();
+		assertThat(message.isTemplate()).isFalse();
+		assertThat(message.getTimestamp()).isEqualTo(expectedTimestamp);
+		assertThat(message.getElapsed()).isEqualTo(1077);
+		assertThat(message.isDone()).isFalse();
+		assertThat(message.isFailed()).isFalse();
+		assertThat(message.getLocation()).isEqualTo("basic.yaml:23");
 		assertThat(message.getMessage().getHeaders()).hasSize(2);
 		assertThat(message.getMessage().getExchangeProperties()).hasSize(3);
 		assertThat(message.getMessage().getExchangeVariables()).hasSize(2);
 		assertThat(message.getMessage().getBody()).isEqualTo("a body for test");
+		assertThat(message.getProcessingThreadName()).isEqualTo("Camel (camel-1) thread #2 - ProducerTemplate");
+		assertThat(message.getRouteId()).isEqualTo("a-route-id");
+		assertThat(message.getFromRouteId()).isEqualTo("direct:start");
+		assertThat(message.getToNode()).isEqualTo("testBasicFlow-log-id");
+		assertThat(message.getToNodeParentId()).isEqualTo("choice-parent-id");
+		assertThat(message.getToNodeParentWhenId()).isEqualTo("choice-when-id");
+		assertThat(message.getToNodeParentWhenLabel()).isEqualTo("when[simple{${body}}]");
+		assertThat(message.getToNodeShortName()).isEqualTo("log");
+		assertThat(message.getToNodeLabel()).isEqualTo("log:foo");
+		assertThat(message.getToNodeLevel()).isEqualTo(2);
+		assertThat(message.getExchangeId()).isEqualTo("7F4C7BF7F3898E7-0000000000000000");
+		assertThat(message.getCorrelationExchangeId()).isEqualTo("ABC-DEF-123");
 	}
 
 }
