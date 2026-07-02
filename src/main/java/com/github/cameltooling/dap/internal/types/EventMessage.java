@@ -164,6 +164,10 @@ public class EventMessage implements BacklogTracerEventMessage {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
 	@Override
+	public boolean isStubEndpoint() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
 	public String getEndpointServiceUrl() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
@@ -177,6 +181,42 @@ public class EventMessage implements BacklogTracerEventMessage {
 	}
 	@Override
 	public void setException(Throwable cause) {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getBreadcrumbId() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getFromRouteId() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getToNodeParentId() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getToNodeParentWhenId() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getToNodeParentWhenLabel() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getToNodeShortName() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getToNodeLabel() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public int getToNodeLevel() {
+		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
+	}
+	@Override
+	public String getCorrelationExchangeId() {
 		throw new UnsupportedOperationException("This class is used only to read message sent from Camel server through JMX");
 	}
 
