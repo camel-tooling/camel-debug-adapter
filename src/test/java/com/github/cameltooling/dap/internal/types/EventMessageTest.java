@@ -26,51 +26,51 @@ class EventMessageTest {
 
 	@Test
 	void testIsStubEndpointThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.isStubEndpoint()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::isStubEndpoint).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetBreadcrumbIdThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getBreadcrumbId()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getBreadcrumbId).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetFromRouteIdThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getFromRouteId()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getFromRouteId).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetToNodeParentIdThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getToNodeParentId()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getToNodeParentId).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetToNodeParentWhenIdThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getToNodeParentWhenId()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getToNodeParentWhenId).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetToNodeParentWhenLabelThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getToNodeParentWhenLabel()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getToNodeParentWhenLabel).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetToNodeShortNameThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getToNodeShortName()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getToNodeShortName).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetToNodeLabelThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getToNodeLabel()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getToNodeLabel).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetToNodeLevelThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getToNodeLevel()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getToNodeLevel).isInstanceOf(UnsupportedOperationException.class);
 	}
 
 	@Test
 	void testGetCorrelationExchangeIdThrowsUnsupportedOperationException() {
-		assertThatThrownBy(() -> eventMessage.getCorrelationExchangeId()).isInstanceOf(UnsupportedOperationException.class);
+		assertThatThrownBy(eventMessage::getCorrelationExchangeId).isInstanceOf(UnsupportedOperationException.class);
 	}
 }
